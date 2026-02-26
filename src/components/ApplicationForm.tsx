@@ -83,7 +83,7 @@ export default function ApplicationForm() {
         const fileExt = formData.file.name.split(".").pop();
         const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
 
-        const { data: uploadData, error: uploadError } = await supabase.storage
+        const { error: uploadError } = await supabase.storage
           .from("transcripts")
           .upload(fileName, formData.file);
 
@@ -120,9 +120,10 @@ export default function ApplicationForm() {
         file: null,
       });
       setUploadSuccess(false);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Submission Error:", error);
-      alert("Error: " + error.message);
+      const message = error instanceof Error ? error.message : "Unknown error";
+      alert("Error: " + message);
     } finally {
       setIsUploading(false);
     }

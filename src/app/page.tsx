@@ -21,6 +21,15 @@ export default function Home() {
         </p>
       </div>
 
+      <div className="mb-6 text-center">
+        <a
+          href="/admin"
+          className="inline-flex rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-100"
+        >
+          View applicants (Admin)
+        </a>
+      </div>
+
       <ApplicationForm />
     </main>
   );
