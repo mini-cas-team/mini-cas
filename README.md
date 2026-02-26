@@ -9,3 +9,5 @@
    NEXT_PUBLIC_SUPABASE_URL=your_url_here
    NEXT_PUBLIC_SUPABASE_ANON_KEY=your_key_here
    ```
+
+> Codex note: README test update on codex branch.
