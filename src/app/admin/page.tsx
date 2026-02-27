@@ -17,6 +17,62 @@ type Application = {
 export default function AdminPortal() {
     const [applications, setApplications] = useState<Application[]>([]);
     const [loading, setLoading] = useState(true);
+    const [selectedIds, setSelectedIds] = useState<number[]>([]);
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.checked) {
+            setSelectedIds(applications.map(app => app.id));
+        } else {
+            setSelectedIds([]);
+        }
+    };
+
+    const handleSelectOne = (id: number) => {
+        setSelectedIds(prev =>
+            prev.includes(id) ? prev.filter(selectedId => selectedId !== id) : [...prev, id]
+        );
+    };
+
+    const handleDeleteSelected = async () => {
+        if (selectedIds.length === 0) return;
+        if (!confirm(`Are you sure you want to delete ${selectedIds.length} application(s)? This will also delete associated files.`)) return;
+
+        setIsDeleting(true);
+        try {
+            const appsToDelete = applications.filter(app => selectedIds.includes(app.id));
+
+            // 1. Delete files from Supabase Storage
+            const filesToDelete = appsToDelete
+                .filter(app => app.file_url)
+                .map(app => app.file_url.split('/').pop())
+                .filter((name): name is string => !!name);
+
+            if (filesToDelete.length > 0) {
+                const { error: storageError } = await supabase.storage
+                    .from("transcripts")
+                    .remove(filesToDelete);
+                if (storageError) console.error("Error deleting files:", storageError);
+            }
+
+            // 2. Delete records from database
+            const { error: dbError } = await supabase
+                .from("applications")
+                .delete()
+                .in("id", selectedIds);
+
+            if (dbError) throw dbError;
+
+            // 3. Update UI
+            setApplications(prev => prev.filter(app => !selectedIds.includes(app.id)));
+            setSelectedIds([]);
+        } catch (error: any) {
+            console.error("Deletion Error:", error);
+            alert("Error: " + error.message);
+        } finally {
+            setIsDeleting(false);
+        }
+    };
 
     useEffect(() => {
         async function fetchApplications() {
@@ -51,13 +107,32 @@ export default function AdminPortal() {
 
                 <div className="bg-white shadow overflow-hidden sm:rounded-lg">
                     <div className="px-4 py-5 sm:px-6 border-b border-gray-200 text-lg font-medium text-gray-900 flex justify-between items-center">
-                        Student Applications
+                        <div className="flex items-center space-x-4">
+                            <span>Student Applications</span>
+                            {selectedIds.length > 0 && (
+                                <button
+                                    onClick={handleDeleteSelected}
+                                    disabled={isDeleting}
+                                    className="text-sm bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 transition-colors disabled:bg-red-400"
+                                >
+                                    {isDeleting ? "Deleting..." : `Delete Selected (${selectedIds.length})`}
+                                </button>
+                            )}
+                        </div>
                         {loading && <span className="text-sm text-gray-500">Loading applications...</span>}
                     </div>
                     <div className="overflow-x-auto">
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gray-50">
                                 <tr>
+                                    <th scope="col" className="px-6 py-3 text-left">
+                                        <input
+                                            type="checkbox"
+                                            className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+                                            checked={applications.length > 0 && selectedIds.length === applications.length}
+                                            onChange={handleSelectAll}
+                                        />
+                                    </th>
                                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Full Name</th>
                                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Program</th>
                                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
@@ -69,13 +144,21 @@ export default function AdminPortal() {
                             <tbody className="bg-white divide-y divide-gray-200">
                                 {applications.length === 0 && !loading ? (
                                     <tr>
-                                        <td colSpan={6} className="px-6 py-4 text-center text-sm text-gray-500">
+                                        <td colSpan={7} className="px-6 py-4 text-center text-sm text-gray-500">
                                             No applications found.
                                         </td>
                                     </tr>
                                 ) : (
                                     applications.map((app) => (
                                         <tr key={app.id} className="hover:bg-gray-50 transition-colors">
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <input
+                                                    type="checkbox"
+                                                    className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+                                                    checked={selectedIds.includes(app.id)}
+                                                    onChange={() => handleSelectOne(app.id)}
+                                                />
+                                            </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                                                 {app.full_name}
                                                 <div className="text-xs text-gray-500 font-normal">{app.email}</div>
@@ -98,8 +181,8 @@ export default function AdminPortal() {
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                                 <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${app.status === 'Approved' ? 'bg-green-100 text-green-800' :
-                                                        app.status === 'Rejected' ? 'bg-red-100 text-red-800' :
-                                                            'bg-yellow-100 text-yellow-800'
+                                                    app.status === 'Rejected' ? 'bg-red-100 text-red-800' :
+                                                        'bg-yellow-100 text-yellow-800'
                                                     }`}>
                                                     {app.status || 'Pending'}
                                                 </span>
