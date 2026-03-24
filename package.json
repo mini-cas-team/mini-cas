@@ -10,12 +10,18 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.98.0",
+    "@types/pg": "^8.20.0",
+    "js-yaml": "^4.1.1",
+    "lucide-react": "^1.0.1",
     "next": "16.1.6",
+    "pdf-lib": "^1.17.1",
+    "pg": "^8.20.0",
     "react": "19.2.3",
     "react-dom": "19.2.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/js-yaml": "^4.0.9",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
