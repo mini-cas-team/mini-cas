@@ -1,16 +1,18 @@
 'use server';
 
-import fs from 'fs';
-import path from 'path';
-import yaml from 'js-yaml';
+import { supabase } from '@/lib/supabase';
 
 export async function getSchools() {
     try {
-        const fileContents = fs.readFileSync(path.join(process.cwd(), 'src', 'config', 'school.yml'), 'utf8');
-        const data = yaml.load(fileContents) as any;
-        return data.schools || [];
+        const { data, error } = await supabase
+            .from('schools')
+            .select('*')
+            .order('name');
+
+        if (error) throw error;
+        return data || [];
     } catch (e) {
-        console.error("Failed to load schools:", e);
+        console.error("Failed to load schools from database:", e);
         return [];
     }
 }

@@ -1,13 +1,23 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { LogIn } from 'lucide-react';
+import { getSchools } from '@/lib/schoolActions';
 
 export default function LoginPage() {
   const [name, setName] = useState('');
   const [type, setType] = useState('student');
+  const [schools, setSchools] = useState<any[]>([]);
   const router = useRouter();
+
+  useEffect(() => {
+    async function loadSchools() {
+      const schoolData = await getSchools();
+      setSchools(schoolData);
+    }
+    loadSchools();
+  }, []);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,6 +29,15 @@ export default function LoginPage() {
 
     // Direct to the right portal
     router.push(`/${type}`);
+  };
+
+  const getNameLabel = () => {
+    switch (type) {
+      case 'student': return 'Student Name';
+      case 'admin': return 'Administrador';
+      case 'school': return 'School Name';
+      default: return 'Full Name';
+    }
   };
 
   return (
@@ -36,7 +55,7 @@ export default function LoginPage() {
         <form onSubmit={handleLogin} className="space-y-6">
           <div>
             <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
-              Full Name
+              {getNameLabel()}
             </label>
             <input
               id="name"
@@ -44,9 +63,17 @@ export default function LoginPage() {
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
+              list={type === 'school' ? 'school-list' : undefined}
               className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-white/50 backdrop-blur-sm"
-              placeholder="e.g. John Doe"
+              placeholder={type === 'school' ? 'Select or type school name' : 'e.g. John Doe'}
             />
+            {type === 'school' && (
+              <datalist id="school-list">
+                {schools.map((school) => (
+                  <option key={school.id} value={school.name} />
+                ))}
+              </datalist>
+            )}
           </div>
 
           <div>
@@ -56,7 +83,10 @@ export default function LoginPage() {
             <select
               id="type"
               value={type}
-              onChange={(e) => setType(e.target.value)}
+              onChange={(e) => {
+                setType(e.target.value);
+                setName(''); // Reset name when type changes
+              }}
               className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-white/50 backdrop-blur-sm"
             >
               <option value="student">Student</option>
