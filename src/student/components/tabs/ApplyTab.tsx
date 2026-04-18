@@ -23,6 +23,8 @@ export default function ApplyTab() {
 
     // DB state
     const [dbApplications, setDbApplications] = useState<any[]>([]);
+    const [schoolQuestions, setSchoolQuestions] = useState<any[]>([]);
+    const [questionAnswers, setQuestionAnswers] = useState<Record<number, string>>({});
     const [isSaving, setIsSaving] = useState(false);
     const [saveStatus, setSaveStatus] = useState<null | 'success' | 'error'>(null);
 
@@ -150,10 +152,58 @@ export default function ApplyTab() {
 
             if (error) throw error;
             setDbApplications(prev => prev.map(a => a.school_id === applyingSchoolId ? data : a));
+
+            // Save Answers
+            const actualAppId = data.id; // Use ID from update result for safety
+            if (schoolQuestions.length > 0) {
+                const answerInserts = schoolQuestions.map(q => ({
+                    application_id: actualAppId,
+                    question_id: q.id,
+                    answer: questionAnswers[q.id] || ''
+                }));
+
+                const { error: answerError } = await supabase
+                    .from('application_answers')
+                    .upsert(answerInserts, { onConflict: 'application_id,question_id' });
+
+                if (answerError) throw answerError;
+            }
+
             setSaveStatus('success');
             setTimeout(() => setSaveStatus(null), 3000);
         } catch (err) {
             console.error('Error saving application:', err);
+            setSaveStatus('error');
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const handleSaveAnswers = async () => {
+        if (!applyingSchoolId) return;
+        const app = dbApplications.find(a => a.school_id === applyingSchoolId);
+        if (!app) return;
+
+        setIsSaving(true);
+        setSaveStatus(null);
+        try {
+            if (schoolQuestions.length > 0) {
+                const answerInserts = schoolQuestions.map(q => ({
+                    application_id: app.id,
+                    question_id: q.id,
+                    answer: questionAnswers[q.id] || ''
+                }));
+
+                const { error: answerError } = await supabase
+                    .from('application_answers')
+                    .upsert(answerInserts, { onConflict: 'application_id,question_id' });
+
+                if (answerError) throw answerError;
+            }
+            setSaveStatus('success');
+            setTimeout(() => setSaveStatus(null), 3000);
+        } catch (err) {
+            console.error('Error saving answers:', err);
             setSaveStatus('error');
         } finally {
             setIsSaving(false);
@@ -173,8 +223,46 @@ export default function ApplyTab() {
             setIncludeGmat(currentApp.include_gmat || false);
             setSelectedLetterPaths(currentApp.selected_letter_paths || []);
             setSelectedTranscriptPaths(currentApp.selected_transcript_paths || []);
+
+            // Load questions and answers for this specific school/application
+            loadQuestionsAndAnswers(applyingSchoolId!, currentApp.id);
+        } else {
+            // Reset state while loading or if not found
+            setIncludeGre(false);
+            setIncludeGmat(false);
+            setSelectedLetterPaths([]);
+            setSelectedTranscriptPaths([]);
+            setSchoolQuestions([]);
+            setQuestionAnswers({});
         }
-    }, [applyingSchoolId]);
+    }, [applyingSchoolId, dbApplications]);
+
+    const loadQuestionsAndAnswers = async (schoolId: number, applicationId: number) => {
+        try {
+            // Fetch Questions
+            const { data: questions } = await supabase
+                .from('school_questions')
+                .select('*')
+                .eq('school_id', schoolId)
+                .order('sort_order', { ascending: true });
+
+            setSchoolQuestions(questions || []);
+
+            // Fetch existing answers
+            const { data: answers } = await supabase
+                .from('application_answers')
+                .select('*')
+                .eq('application_id', applicationId);
+
+            const answerMap: Record<number, string> = {};
+            answers?.forEach(a => {
+                answerMap[a.question_id] = a.answer;
+            });
+            setQuestionAnswers(answerMap);
+        } catch (err) {
+            console.error('Error loading questions/answers:', err);
+        }
+    };
 
     const availableSchools = schools.filter(s =>
         !selectedSchoolIds.includes(s.id) &&
@@ -392,6 +480,39 @@ export default function ApplyTab() {
                             </div>
                         )}
                     </div>
+
+                    {/* School Specific Questions */}
+                    {schoolQuestions.length > 0 && (
+                        <div className="space-y-6 pt-6 border-t border-gray-100 animate-in slide-in-from-bottom-2 duration-300">
+                            <div className="flex items-center justify-between">
+                                <h3 className="text-lg font-bold text-gray-900 border-l-4 border-indigo-500 pl-4">Institutional Questions</h3>
+                                <div className="flex items-center gap-3">
+                                    {saveStatus === 'success' && <span className="text-green-500 text-sm font-medium animate-pulse">Changes Saved!</span>}
+                                    {saveStatus === 'error' && <span className="text-red-500 text-sm font-medium">Save Failed</span>}
+                                    <button
+                                        onClick={handleSaveAnswers}
+                                        disabled={isSaving}
+                                        className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 shadow-sm transition-all disabled:opacity-50"
+                                    >
+                                        {isSaving ? 'Saving...' : 'Save Answers'}
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="space-y-6">
+                                {schoolQuestions.map((q) => (
+                                    <div key={q.id} className="space-y-2">
+                                        <label className="text-sm font-semibold text-gray-700">{q.content}</label>
+                                        <textarea
+                                            value={questionAnswers[q.id] || ''}
+                                            onChange={(e) => setQuestionAnswers(prev => ({ ...prev, [q.id]: e.target.value }))}
+                                            placeholder="Please type your answer here..."
+                                            className="w-full bg-white border border-gray-200 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all placeholder:text-gray-300 min-h-[100px] shadow-sm hover:border-gray-300"
+                                        />
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
                     <div className="pt-6 border-t border-gray-100 flex gap-4 justify-end items-center">
                         {saveStatus === 'success' && <span className="text-green-500 text-sm font-medium animate-pulse">Changes Saved!</span>}
