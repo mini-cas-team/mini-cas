@@ -1,0 +1,31 @@
+schools:
+  - id: 1
+    name: "Harvard University"
+    location: "Cambridge, MA"
+  - id: 2
+    name: "Massachusetts Institute of Technology (MIT)"
+    location: "Cambridge, MA"
+  - id: 3
+    name: "Stanford University"
+    location: "Stanford, CA"
+  - id: 4
+    name: "University of California, Berkeley"
+    location: "Berkeley, CA"
+  - id: 5
+    name: "California Institute of Technology (Caltech)"
+    location: "Pasadena, CA"
+  - id: 6
+    name: "Princeton University"
+    location: "Princeton, NJ"
+  - id: 7
+    name: "Yale University"
+    location: "New Haven, CT"
+  - id: 8
+    name: "Columbia University"
+    location: "New York, NY"
+  - id: 9
+    name: "University of Chicago"
+    location: "Chicago, IL"
+  - id: 10
+    name: "University of Pennsylvania"
+    location: "Philadelphia, PA"

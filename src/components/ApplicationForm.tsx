@@ -26,10 +26,19 @@ export default function ApplicationForm() {
 
   // 2. HELPER FUNCTIONS
   const autoFill = () => {
+    const exampleCandidates = [
+      { fullName: "Alice Smith", email: "alice.smith@example.com", phone: "+1 555-0101" },
+      { fullName: "Bob Jones", email: "bob.jones@example.com", phone: "+1 555-0202" },
+      { fullName: "Charlie Brown", email: "charlie.b@example.com", phone: "+1 555-0303" },
+      { fullName: "Diana Prince", email: "diana.p@example.com", phone: "+1 555-0404" },
+      { fullName: "Evan Wright", email: "evan.w@example.com", phone: "+1 555-0505" },
+    ];
+    const randomCandidate = exampleCandidates[Math.floor(Math.random() * exampleCandidates.length)];
+
     setFormData({
-      fullName: "Test Student",
-      email: "test@example.com",
-      phone: "+1 555-0199",
+      fullName: randomCandidate.fullName,
+      email: randomCandidate.email,
+      phone: randomCandidate.phone,
       program: "Data Science",
       file: null, // Files cannot be auto-filled for security reasons
     });
@@ -229,13 +238,12 @@ export default function ApplicationForm() {
             Upload Transcript (PDF)
           </label>
           <div
-            className={`mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-dashed rounded-lg transition-all duration-300 ${
-              uploadSuccess
+            className={`mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-dashed rounded-lg transition-all duration-300 ${uploadSuccess
                 ? "border-green-500 bg-green-50"
                 : isUploading
                   ? "border-blue-400 bg-blue-50"
                   : "border-gray-300"
-            }`}
+              }`}
           >
             <div className="space-y-1 text-center">
               {isUploading ? (
