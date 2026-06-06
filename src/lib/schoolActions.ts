@@ -57,6 +57,22 @@ export async function deleteSchoolQuestion(id: number) {
   }
 }
 
+export async function createNewSchool(name: string, location: string) {
+  try {
+    const idRes = await query('SELECT COALESCE(MAX(id), 0) + 1 as next_id FROM schools');
+    const nextId = parseInt(idRes.rows[0].next_id, 10);
+    
+    const res = await query(
+      'INSERT INTO schools (id, name, location) VALUES ($1, $2, $3) RETURNING *',
+      [nextId, name, location]
+    );
+    return { success: true, data: res.rows[0] };
+  } catch (e: any) {
+    console.error("Failed to create new school:", e);
+    return { success: false, error: e.message };
+  }
+}
+
 export async function fetchPdfAsBase64(url: string) {
   try {
     const response = await fetch(url);

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useStudentContext } from '@/student/context/StudentContext';
 import { FileText, ChevronDown, Trash2, Building2, X, Search } from 'lucide-react';
-import { getSchools } from '@/lib/schoolActions';
+import { getSchools, createNewSchool } from '@/lib/schoolActions';
 import { generateApplicationPdf } from '@/lib/pdfGenerator';
 import {
     getApplications,
@@ -44,6 +44,11 @@ export default function ApplyTab() {
     const [includeGmat, setIncludeGmat] = useState(false);
 
     const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [newSchoolName, setNewSchoolName] = useState('');
+    const [newSchoolLocation, setNewSchoolLocation] = useState('');
+    const [isCreatingSchool, setIsCreatingSchool] = useState(false);
 
     useEffect(() => {
         async function loadData() {
@@ -235,6 +240,38 @@ export default function ApplyTab() {
             }
         } catch (err) {
             console.error('Error loading questions/answers:', err);
+        }
+    };
+
+    const handleCreateSchool = async () => {
+        if (!newSchoolName.trim() || !newSchoolLocation.trim() || !studentData?.id) return;
+        setIsCreatingSchool(true);
+        try {
+            const schoolRes = await createNewSchool(newSchoolName.trim(), newSchoolLocation.trim());
+            if (!schoolRes.success || !schoolRes.data) {
+                throw new Error(schoolRes.error || 'Failed to create school');
+            }
+            const newSchool = schoolRes.data;
+            
+            setSchools(prev => [...prev, newSchool]);
+
+            const appRes = await addApplication(studentData.id, newSchool.id);
+            if (!appRes.success || !appRes.data) {
+                throw new Error(appRes.error || 'Failed to create application for new school');
+            }
+
+            setSelectedSchoolIds(prev => [...prev, newSchool.id]);
+            setDbApplications(prev => [...prev, appRes.data]);
+            
+            setNewSchoolName('');
+            setNewSchoolLocation('');
+            setIsCreateModalOpen(false);
+            setSearchQuery('');
+        } catch (err: any) {
+            console.error('Error creating institution:', err);
+            alert(`Failed to create institution: ${err.message}`);
+        } finally {
+            setIsCreatingSchool(false);
         }
     };
 
@@ -596,6 +633,14 @@ export default function ApplyTab() {
                                         className="w-full pl-10 pr-4 py-3 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-sm"
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter' && availableSchools.length === 0) {
+                                                e.preventDefault();
+                                                setIsModalOpen(false);
+                                                setIsCreateModalOpen(true);
+                                                setNewSchoolName(searchQuery);
+                                            }
+                                        }}
                                     />
                                 </div>
 
@@ -626,6 +671,59 @@ export default function ApplyTab() {
 
                             <div className="p-6 bg-gray-50 border-t border-gray-100">
                                 <p className="text-xs text-gray-400 text-center font-medium">Found {availableSchools.length} institutions in database</p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Create Institution Modal */}
+                {isCreateModalOpen && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
+                        <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                            <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-white sticky top-0">
+                                <h3 className="text-xl font-bold text-gray-900">Create New Institution</h3>
+                                <button onClick={() => setIsCreateModalOpen(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                                    <X className="w-5 h-5 text-gray-500" />
+                                </button>
+                            </div>
+
+                            <div className="p-6 space-y-4">
+                                <div className="space-y-1">
+                                    <label className="text-xs font-bold text-gray-500 uppercase">Institution Name</label>
+                                    <input
+                                        type="text"
+                                        placeholder="e.g. Boston University"
+                                        className="w-full bg-gray-50 border-none rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                                        value={newSchoolName}
+                                        onChange={(e) => setNewSchoolName(e.target.value)}
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-xs font-bold text-gray-500 uppercase">Location</label>
+                                    <input
+                                        type="text"
+                                        placeholder="e.g. Boston, MA"
+                                        className="w-full bg-gray-50 border-none rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                                        value={newSchoolLocation}
+                                        onChange={(e) => setNewSchoolLocation(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="p-6 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">
+                                <button
+                                    onClick={() => setIsCreateModalOpen(false)}
+                                    className="px-5 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-all"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleCreateSchool}
+                                    disabled={!newSchoolName.trim() || !newSchoolLocation.trim() || isCreatingSchool}
+                                    className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 transition-all disabled:opacity-50"
+                                >
+                                    {isCreatingSchool ? 'Creating...' : 'Complete'}
+                                </button>
                             </div>
                         </div>
                     </div>
