@@ -46,21 +46,22 @@ AWS_SECRET_ACCESS_KEY=your_aws_secret_access_key
 ```
 
 ### 4. Database Schema and Seeding
-Before running the app, provision your RDS tables and seed the initial schools data:
+Before running the app, provision your RDS PostgreSQL tables and seed the initial schools data. You can do this quickly using the following npm commands:
 ```bash
 # Create the RDS tables
-node --env-file=.env.local setup-db-tables.js
+npm run db:setup
 
 # Seed the initial 10 universities
-node --env-file=.env.local scripts/migrate-schools.js
+npm run db:seed
+
+# Or execute both in one command
+npm run db:reset
 ```
 
 ### 5. Onboard Test Student Records (Optional)
-To quickly populate your local RDS database and S3 bucket with test records, transcripts, and recommendation letters, you can run the student record onboarding scripts:
+To quickly populate your local database and S3 bucket with test records, transcripts, and recommendation letters, run the onboarding script command:
 ```bash
-# Onboard a default student (Alice Smith)
-node --env-file=.env.local create-transcript.js
-node --env-file=.env.local create-recommendation-letters.js
+npm run db:onboard
 ```
 
 ### 6. Start the development server

@@ -6,7 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:setup": "node --env-file=.env.local setup-db-tables.js",
+    "db:seed": "node --env-file=.env.local scripts/migrate-schools.js",
+    "db:onboard": "node --env-file=.env.local create-transcript.js && node --env-file=.env.local create-recommendation-letters.js",
+    "db:reset": "npm run db:setup && npm run db:seed"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1063.0",
