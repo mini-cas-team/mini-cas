@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { supabase } from '@/lib/supabase';
+import { getStudentByName, createStudent, updateStudent } from '@/lib/studentActions';
 
 type Tab = 'personal' | 'exam' | 'transcripts' | 'recommend' | 'apply';
 
@@ -57,13 +57,10 @@ export function StudentProvider({ children }: { children: ReactNode }) {
             if (!match) return;
             const userName = decodeURIComponent(match[2]);
 
-            const { data, error } = await supabase
-                .from('students')
-                .select('*')
-                .eq('name', userName)
-                .maybeSingle(); // Use maybeSingle to avoid 406 on 0 rows
+            const res = await getStudentByName(userName);
 
-            if (data) {
+            if (res.success && res.data) {
+                const data = res.data;
                 const loadedData: StudentData = {
                     id: data.id,
                     name: data.name || userName,
@@ -79,14 +76,10 @@ export function StudentProvider({ children }: { children: ReactNode }) {
                 setOriginalData(loadedData);
             } else {
                 // Create empty record if it doesn't exist
-                const newRecord = { name: userName };
-                const { data: insertData, error: insertError } = await supabase
-                    .from('students')
-                    .insert(newRecord)
-                    .select()
-                    .single();
+                const createRes = await createStudent(userName);
 
-                if (insertData && !insertError) {
+                if (createRes.success && createRes.data) {
+                    const insertData = createRes.data;
                     const newData = {
                         id: insertData.id,
                         name: insertData.name,
@@ -100,11 +93,12 @@ export function StudentProvider({ children }: { children: ReactNode }) {
                     };
                     setStudentData(newData);
                     setOriginalData(newData);
-                } else if (insertError && insertError.code === '23505') {
+                } else if (createRes.code === '23505') {
                     // React Strict mode double-fire race condition caught! 
                     // The record was created by the parallel request. Let's just fetch it.
-                    const { data: retryData } = await supabase.from('students').select('*').eq('name', userName).maybeSingle();
-                    if (retryData) {
+                    const retryRes = await getStudentByName(userName);
+                    if (retryRes.success && retryRes.data) {
+                        const retryData = retryRes.data;
                         const loadedData: StudentData = {
                             id: retryData.id,
                             name: retryData.name || userName,
@@ -120,8 +114,8 @@ export function StudentProvider({ children }: { children: ReactNode }) {
                         setOriginalData(loadedData);
                     }
                 } else {
-                    console.error("Failed to auto-create student record:", insertError);
-                    alert(`Database error creating student record: ${insertError?.message || 'Unknown Error'}`);
+                    console.error("Failed to auto-create student record:", createRes.error);
+                    alert(`Database error creating student record: ${createRes.error || 'Unknown Error'}`);
                     // Fallback visually so it's not permanently empty
                     setStudentData(prev => ({ ...prev, name: userName }));
                 }
@@ -134,25 +128,22 @@ export function StudentProvider({ children }: { children: ReactNode }) {
     const saveChanges = async () => {
         if (!studentData.id) return;
         try {
-            const { error } = await supabase
-                .from('students')
-                .update({
-                    email: studentData.email,
-                    address: studentData.address,
-                    college_university: studentData.college_university,
-                    major: studentData.major,
-                    exams: studentData.exams,
-                    recommendation_letters: studentData.recommendation_letters,
-                    transcripts: studentData.transcripts
-                })
-                .eq('id', studentData.id);
+            const res = await updateStudent(studentData.id, {
+                email: studentData.email,
+                address: studentData.address,
+                college_university: studentData.college_university,
+                major: studentData.major,
+                exams: studentData.exams,
+                recommendation_letters: studentData.recommendation_letters,
+                transcripts: studentData.transcripts
+            });
 
-            if (!error) {
+            if (res.success) {
                 setOriginalData(studentData);
                 setIsDirty(false);
             } else {
-                console.error("Error saving:", error);
-                alert('Failed to save to Supabase check console for details.');
+                console.error("Error saving:", res.error);
+                alert(`Failed to save to AWS RDS: ${res.error}`);
             }
         } catch (err) {
             console.error(err);

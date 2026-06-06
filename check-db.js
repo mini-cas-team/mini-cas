@@ -1,17 +1,28 @@
-const { createClient } = require('@supabase/supabase-js');
-const fs = require('fs');
-const dotenv = require('dotenv');
+const { Pool } = require('pg');
 
-dotenv.config({ path: '.env.local' });
+const dbUrl = process.env.DATABASE_URL;
+if (!dbUrl) {
+    console.error('❌ DATABASE_URL is not set. Run this script with node --env-file=.env.local check-db.js');
+    process.exit(1);
+}
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-const supabase = createClient(supabaseUrl, supabaseKey);
+const pool = new Pool({
+    connectionString: dbUrl,
+    ssl: { rejectUnauthorized: false }
+});
 
 async function check() {
-    const { data: questions } = await supabase.from('school_questions').select('*');
-    console.log('QUESTIONS:', questions);
-    const { data: schools } = await supabase.from('schools').select('*');
-    console.log('SCHOOLS:', schools);
+    try {
+        console.log('Connecting to RDS PostgreSQL...');
+        const { rows: questions } = await pool.query('SELECT * FROM school_questions');
+        console.log('✅ QUESTIONS:', questions);
+        
+        const { rows: schools } = await pool.query('SELECT * FROM schools');
+        console.log('✅ SCHOOLS:', schools);
+    } catch (e) {
+        console.error('❌ Database query failed:', e.message);
+    } finally {
+        await pool.end();
+    }
 }
 check();

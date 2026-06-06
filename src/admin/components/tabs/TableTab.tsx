@@ -9,7 +9,11 @@ export default function TableTab() {
             <p className="text-slate-500 mb-8">Click run to check existence or instantly provision Postgres tables.</p>
 
             <div className="space-y-6">
-                <ProvisionBlock title="Student Entity" targetName="students" type="table" />
+                <ProvisionBlock title="Student Profiles" targetName="students" type="table" />
+                <ProvisionBlock title="Academic Institutions" targetName="schools" type="table" />
+                <ProvisionBlock title="Academic Applications" targetName="applications" type="table" />
+                <ProvisionBlock title="Institutional Questions" targetName="school_questions" type="table" />
+                <ProvisionBlock title="Application Answers" targetName="application_answers" type="table" />
             </div>
         </div>
     );

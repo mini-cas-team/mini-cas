@@ -1,11 +1,11 @@
-import { Pool } from 'pg';
-import fs from 'fs';
-import path from 'path';
-import yaml from 'js-yaml';
+const { Pool } = require('pg');
+const fs = require('fs');
+const path = require('path');
+const yaml = require('js-yaml');
 
 const dbUrl = process.env.DATABASE_URL;
 if (!dbUrl) {
-  console.error('❌ DATABASE_URL is not set. Run this script with ts-node or load environment variables first.');
+  console.error('❌ DATABASE_URL is not set. Run this script with node --env-file=.env.local scripts/migrate-schools.js');
   process.exit(1);
 }
 
@@ -18,7 +18,6 @@ async function migrate() {
   console.log('🚀 Starting school migration to AWS RDS PostgreSQL...');
   
   try {
-    // Try src/config/school.yml first, fall back to school_notuse.yml if not found
     let yamlPath = path.join(process.cwd(), 'src', 'config', 'school.yml');
     if (!fs.existsSync(yamlPath)) {
       yamlPath = path.join(process.cwd(), 'src', 'config', 'school_notuse.yml');
@@ -31,7 +30,7 @@ async function migrate() {
 
     console.log(`Loading schools from: ${yamlPath}`);
     const fileContents = fs.readFileSync(yamlPath, 'utf8');
-    const parsedData = yaml.load(fileContents) as any;
+    const parsedData = yaml.load(fileContents);
     const schools = parsedData.schools || [];
 
     console.log(`📦 Found ${schools.length} schools in YAML.`);

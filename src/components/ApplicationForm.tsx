@@ -3,7 +3,9 @@
 // import { useState, useEffect, ChangeEvent } from "react";
 "use client";
 import { useState, useEffect, ChangeEvent } from "react";
-import { supabase } from "../lib/supabase"; // <--- ADD THIS
+import { getUploadUrlAction } from "../lib/storageActions";
+import { submitLandingApplication } from "../lib/studentActions";
+
 export default function ApplicationForm() {
   // 1. STATE MANAGEMENT
   const [isDev, setIsDev] = useState(false);
@@ -45,21 +47,6 @@ export default function ApplicationForm() {
     setUploadSuccess(false);
   };
 
-  // const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
-  //   if (e.target.files && e.target.files[0]) {
-  //     const selectedFile = e.target.files[0];
-  //     setFormData((prev) => ({ ...prev, file: selectedFile }));
-
-  //     // Simulate Upload
-  //     setIsUploading(true);
-  //     setUploadSuccess(false);
-  //     setTimeout(() => {
-  //       setIsUploading(false);
-  //       setUploadSuccess(true);
-  //     }, 1500);
-  //   }
-  // };
-
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
@@ -68,18 +55,6 @@ export default function ApplicationForm() {
     }
   };
 
-  // const handleSubmit = (e: React.FormEvent) => {
-  //   e.preventDefault();
-  //   if (!uploadSuccess && formData.file) {
-  //     alert("Please wait for the file to finish uploading.");
-  //     return;
-  //   }
-  //   console.log("Final Submission Data:", formData);
-  //   alert(
-  //     `Application submitted for ${formData.fullName}! Check the console for details.`,
-  //   );
-  // };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsUploading(true);
@@ -87,39 +62,45 @@ export default function ApplicationForm() {
     try {
       let publicUrl = "";
 
-      // A. Upload File to Supabase Storage
+      // A. Upload File to S3 via Presigned URL
       if (formData.file) {
         const fileExt = formData.file.name.split(".").pop();
         const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
+        const fileKey = `transcripts/${fileName}`;
 
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from("transcripts")
-          .upload(fileName, formData.file);
+        const res = await getUploadUrlAction(fileKey, formData.file.type);
+        if (!res.success || !res.url) {
+          throw new Error(res.error || "Failed to generate S3 upload destination.");
+        }
 
-        if (uploadError) throw uploadError;
+        // Upload directly from browser to S3
+        const uploadRes = await fetch(res.url, {
+          method: "PUT",
+          body: formData.file,
+          headers: {
+            "Content-Type": formData.file.type
+          }
+        });
 
-        // Get the URL so we can store it in the database
-        const { data: urlData } = supabase.storage
-          .from("transcripts")
-          .getPublicUrl(fileName);
+        if (!uploadRes.ok) {
+          throw new Error(`S3 upload failed with status ${uploadRes.status}`);
+        }
 
-        publicUrl = urlData.publicUrl;
+        publicUrl = fileKey;
       }
 
-      // B. Save Data to Supabase Database
-      const { error: dbError } = await supabase.from("applications").insert([
-        {
-          full_name: formData.fullName,
-          email: formData.email,
-          phone: formData.phone,
-          program: formData.program,
-          file_url: publicUrl,
-        },
-      ]);
+      // B. Save Data to PostgreSQL Database
+      const dbRes = await submitLandingApplication({
+        fullName: formData.fullName,
+        email: formData.email,
+        phone: formData.phone,
+        program: formData.program,
+        file_url: publicUrl
+      });
 
-      if (dbError) throw dbError;
+      if (!dbRes.success) throw new Error(dbRes.error);
 
-      alert("Success! Your application is in the cloud.");
+      alert("Success! Your application is in the AWS cloud.");
       // Reset form
       setFormData({
         fullName: "",

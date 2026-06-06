@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { UploadCloud, Trash2, FileText, Loader2 } from 'lucide-react';
 import { useStudentContext } from '@/student/context/StudentContext';
-import { supabase } from '@/lib/supabase';
+import { getUploadUrlAction, deleteFileAction } from '@/lib/storageActions';
 
 export default function RecommendLetterTab() {
     const { studentData, setStudentData, setIsDirty } = useStudentContext();
@@ -18,6 +18,11 @@ export default function RecommendLetterTab() {
 
         setStudentData(prev => ({ ...prev, recommendation_letters: newLetters }));
         setIsDirty(true);
+
+        // Optional: delete file from S3 bucket as well
+        if (fileToDelete?.path) {
+            await deleteFileAction(fileToDelete.path);
+        }
     };
 
     const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -26,30 +31,51 @@ export default function RecommendLetterTab() {
             const file = e.target.files[0];
             const fileExt = file.name.split('.').pop();
             const fileName = `${studentData.id}_${Date.now()}.${fileExt}`;
+            const fileKey = `recommendationLetter/${fileName}`;
 
-            // Assumes a 'recommendationLetter' bucket exists in Supabase
-            const { data, error } = await supabase.storage
-                .from('recommendationLetter')
-                .upload(fileName, file);
+            // Obtain presigned S3 upload URL
+            const res = await getUploadUrlAction(fileKey, file.type);
 
-            if (error) {
-                console.error('Upload error', error);
-                alert('Failed to upload file. Does the "recommendationLetter" storage bucket exist?');
-            } else {
+            if (!res.success || !res.url) {
+                console.error('Failed to get upload URL:', res.error);
+                alert(`Failed to upload file: ${res.error || 'Server error'}`);
+                setUploading(false);
+                return;
+            }
+
+            try {
+                // Upload file directly from browser to AWS S3
+                const uploadRes = await fetch(res.url, {
+                    method: 'PUT',
+                    body: file,
+                    headers: {
+                        'Content-Type': file.type
+                    }
+                });
+
+                if (!uploadRes.ok) {
+                    throw new Error(`S3 upload returned status ${uploadRes.status}`);
+                }
+
                 const newLetter = {
                     name: file.name,
-                    path: data.path,
+                    path: fileKey,
                     size: (file.size / 1024 / 1024).toFixed(2) + ' MB',
                     date: new Date().toLocaleDateString()
                 };
+
                 setStudentData(prev => ({
                     ...prev,
                     recommendation_letters: [...(prev.recommendation_letters || []), newLetter]
                 }));
                 setIsDirty(true);
+            } catch (err: any) {
+                console.error('S3 Upload error', err);
+                alert(`Failed to upload file to S3: ${err.message}`);
+            } finally {
+                setUploading(false);
+                e.target.value = ''; // Reset input
             }
-            setUploading(false);
-            e.target.value = ''; // Reset input
         }
     };
 
@@ -77,7 +103,7 @@ export default function RecommendLetterTab() {
                         <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100 transition-all hover:border-gray-300">
                             <div className="flex items-center gap-4">
                                 <a
-                                    href={supabase.storage.from('recommendationLetter').getPublicUrl(letter.path).data.publicUrl}
+                                    href={`/api/documents?key=${encodeURIComponent(letter.path)}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="p-3 bg-white rounded-xl shadow-sm hover:shadow hover:ring-2 hover:ring-blue-500 transition-all cursor-pointer group"

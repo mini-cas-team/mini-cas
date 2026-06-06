@@ -3,9 +3,17 @@
 import { useState, useEffect } from 'react';
 import { useStudentContext } from '@/student/context/StudentContext';
 import { FileText, ChevronDown, Trash2, Building2, X, Search } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
 import { getSchools } from '@/lib/schoolActions';
 import { generateApplicationPdf } from '@/lib/pdfGenerator';
+import {
+    getApplications,
+    addApplication,
+    removeApplication,
+    updateApplicationAction,
+    getSchoolQuestions,
+    getApplicationAnswers,
+    saveApplicationAnswers
+} from '@/lib/studentActions';
 
 export default function ApplyTab() {
     const { studentData } = useStudentContext();
@@ -47,14 +55,11 @@ export default function ApplyTab() {
 
                 // Load Applications
                 if (studentData?.id) {
-                    const { data: apps, error } = await supabase
-                        .from('applications')
-                        .select('*')
-                        .eq('student_id', studentData.id);
-
-                    if (error) throw error;
-                    setDbApplications(apps || []);
-                    setSelectedSchoolIds(apps?.map(a => a.school_id) || []);
+                    const res = await getApplications(studentData.id);
+                    if (res.success && res.data) {
+                        setDbApplications(res.data);
+                        setSelectedSchoolIds(res.data.map(a => a.school_id));
+                    }
                 }
             } catch (err) {
                 console.error('Error loading data:', err);
@@ -66,24 +71,17 @@ export default function ApplyTab() {
     }, [studentData?.id]);
 
     const addSchool = async (id: number) => {
-        if (!selectedSchoolIds.includes(id)) {
+        if (!selectedSchoolIds.includes(id) && studentData.id) {
             try {
-                const { data, error } = await supabase
-                    .from('applications')
-                    .insert({
-                        student_id: studentData.id,
-                        school_id: id,
-                        status: 'draft'
-                    })
-                    .select()
-                    .single();
-
-                if (error) throw error;
-
-                setSelectedSchoolIds(prev => [...prev, id]);
-                setDbApplications(prev => [...prev, data]);
-                setIsModalOpen(false);
-                setSearchQuery('');
+                const res = await addApplication(studentData.id, id);
+                if (res.success && res.data) {
+                    setSelectedSchoolIds(prev => [...prev, id]);
+                    setDbApplications(prev => [...prev, res.data]);
+                    setIsModalOpen(false);
+                    setSearchQuery('');
+                } else {
+                    throw new Error(res.error);
+                }
             } catch (err) {
                 console.error('Error adding school:', err);
                 alert('Failed to add school. Please try again.');
@@ -92,20 +90,18 @@ export default function ApplyTab() {
     };
 
     const removeSchool = async (id: number) => {
+        if (!studentData.id) return;
         try {
-            const { error } = await supabase
-                .from('applications')
-                .delete()
-                .eq('student_id', studentData.id)
-                .eq('school_id', id);
-
-            if (error) throw error;
-
-            setSelectedSchoolIds(prev => prev.filter(sId => sId !== id));
-            setDbApplications(prev => prev.filter(a => a.school_id !== id));
-            if (applyingSchoolId === id) {
-                setCurrentView('selection');
-                setApplyingSchoolId(null);
+            const res = await removeApplication(studentData.id, id);
+            if (res.success) {
+                setSelectedSchoolIds(prev => prev.filter(sId => sId !== id));
+                setDbApplications(prev => prev.filter(a => a.school_id !== id));
+                if (applyingSchoolId === id) {
+                    setCurrentView('selection');
+                    setApplyingSchoolId(null);
+                }
+            } else {
+                throw new Error(res.error);
             }
         } catch (err) {
             console.error('Error removing school:', err);
@@ -113,24 +109,21 @@ export default function ApplyTab() {
     };
 
     const updateApplication = async (schoolId: number, updates: any) => {
+        if (!studentData.id) return;
         try {
-            const { data, error } = await supabase
-                .from('applications')
-                .update(updates)
-                .eq('student_id', studentData.id)
-                .eq('school_id', schoolId)
-                .select()
-                .single();
-
-            if (error) throw error;
-            setDbApplications(prev => prev.map(a => a.school_id === schoolId ? data : a));
+            const res = await updateApplicationAction(studentData.id, schoolId, updates);
+            if (res.success && res.data) {
+                setDbApplications(prev => prev.map(a => a.school_id === schoolId ? res.data : a));
+            } else {
+                throw new Error(res.error);
+            }
         } catch (err) {
             console.error('Error updating application:', err);
         }
     };
 
     const handleSave = async () => {
-        if (!applyingSchoolId) return;
+        if (!applyingSchoolId || !studentData.id) return;
         setIsSaving(true);
         setSaveStatus(null);
         try {
@@ -138,23 +131,15 @@ export default function ApplyTab() {
                 include_gre: includeGre,
                 include_gmat: includeGmat,
                 selected_letter_paths: selectedLetterPaths,
-                selected_transcript_paths: selectedTranscriptPaths,
-                updated_at: new Date().toISOString()
+                selected_transcript_paths: selectedTranscriptPaths
             };
 
-            const { data, error } = await supabase
-                .from('applications')
-                .update(updates)
-                .eq('student_id', studentData.id)
-                .eq('school_id', applyingSchoolId)
-                .select()
-                .single();
-
-            if (error) throw error;
-            setDbApplications(prev => prev.map(a => a.school_id === applyingSchoolId ? data : a));
+            const res = await updateApplicationAction(studentData.id, applyingSchoolId, updates);
+            if (!res.success || !res.data) throw new Error(res.error);
+            setDbApplications(prev => prev.map(a => a.school_id === applyingSchoolId ? res.data : a));
 
             // Save Answers
-            const actualAppId = data.id; // Use ID from update result for safety
+            const actualAppId = res.data.id;
             if (schoolQuestions.length > 0) {
                 const answerInserts = schoolQuestions.map(q => ({
                     application_id: actualAppId,
@@ -162,11 +147,8 @@ export default function ApplyTab() {
                     answer: questionAnswers[q.id] || ''
                 }));
 
-                const { error: answerError } = await supabase
-                    .from('application_answers')
-                    .upsert(answerInserts, { onConflict: 'application_id,question_id' });
-
-                if (answerError) throw answerError;
+                const ansRes = await saveApplicationAnswers(answerInserts);
+                if (!ansRes.success) throw new Error(ansRes.error);
             }
 
             setSaveStatus('success');
@@ -194,11 +176,8 @@ export default function ApplyTab() {
                     answer: questionAnswers[q.id] || ''
                 }));
 
-                const { error: answerError } = await supabase
-                    .from('application_answers')
-                    .upsert(answerInserts, { onConflict: 'application_id,question_id' });
-
-                if (answerError) throw answerError;
+                const ansRes = await saveApplicationAnswers(answerInserts);
+                if (!ansRes.success) throw new Error(ansRes.error);
             }
             setSaveStatus('success');
             setTimeout(() => setSaveStatus(null), 3000);
@@ -240,25 +219,20 @@ export default function ApplyTab() {
     const loadQuestionsAndAnswers = async (schoolId: number, applicationId: number) => {
         try {
             // Fetch Questions
-            const { data: questions } = await supabase
-                .from('school_questions')
-                .select('*')
-                .eq('school_id', schoolId)
-                .order('sort_order', { ascending: true });
-
-            setSchoolQuestions(questions || []);
+            const qRes = await getSchoolQuestions(schoolId);
+            if (qRes.success && qRes.data) {
+                setSchoolQuestions(qRes.data);
+            }
 
             // Fetch existing answers
-            const { data: answers } = await supabase
-                .from('application_answers')
-                .select('*')
-                .eq('application_id', applicationId);
-
-            const answerMap: Record<number, string> = {};
-            answers?.forEach(a => {
-                answerMap[a.question_id] = a.answer;
-            });
-            setQuestionAnswers(answerMap);
+            const aRes = await getApplicationAnswers(applicationId);
+            if (aRes.success && aRes.data) {
+                const answerMap: Record<number, string> = {};
+                aRes.data.forEach(a => {
+                    answerMap[a.question_id] = a.answer;
+                });
+                setQuestionAnswers(answerMap);
+            }
         } catch (err) {
             console.error('Error loading questions/answers:', err);
         }
@@ -405,7 +379,7 @@ export default function ApplyTab() {
                                 {selectedLetters.map((letter, index) => (
                                     <div key={index} className="flex items-center justify-between text-sm text-gray-700 hover:text-gray-900 group">
                                         <span className="flex items-center gap-2">
-                                            • <a href={supabase.storage.from('recommendationLetter').getPublicUrl(letter.path).data.publicUrl} target="_blank" rel="noopener noreferrer" className="hover:underline flex items-center gap-1"><FileText className="w-3.5 h-3.5 text-blue-500" /> {letter.name}</a>
+                                            • <a href={`/api/documents?key=${encodeURIComponent(letter.path)}`} target="_blank" rel="noopener noreferrer" className="hover:underline flex items-center gap-1"><FileText className="w-3.5 h-3.5 text-blue-500" /> {letter.name}</a>
                                         </span>
                                         <button onClick={() => {
                                             const newPaths = selectedLetterPaths.filter(p => p !== letter.path);
@@ -467,7 +441,7 @@ export default function ApplyTab() {
                                 {selectedTranscripts.map((transcript, index) => (
                                     <div key={index} className="flex items-center justify-between text-sm text-gray-700 hover:text-gray-900 group">
                                         <span className="flex items-center gap-2">
-                                            • <a href={supabase.storage.from('transcripts').getPublicUrl(transcript.path).data.publicUrl} target="_blank" rel="noopener noreferrer" className="hover:underline flex items-center gap-1"><FileText className="w-3.5 h-3.5 text-blue-500" /> {transcript.name}</a>
+                                            • <a href={`/api/documents?key=${encodeURIComponent(transcript.path)}`} target="_blank" rel="noopener noreferrer" className="hover:underline flex items-center gap-1"><FileText className="w-3.5 h-3.5 text-blue-500" /> {transcript.name}</a>
                                         </span>
                                         <button onClick={() => {
                                             const newPaths = selectedTranscriptPaths.filter(p => p !== transcript.path);

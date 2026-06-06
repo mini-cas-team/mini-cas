@@ -3,6 +3,7 @@
 import fs from 'fs';
 import path from 'path';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import { getFileBuffer } from './s3';
 
 export async function generateApplicationPdf(data: any): Promise<{ url: string, error?: string }> {
     try {
@@ -37,36 +38,30 @@ export async function generateApplicationPdf(data: any): Promise<{ url: string, 
             y -= 20;
         }
 
-        const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://qhaatabhigldcliavkgr.supabase.co';
-
         for (const transcript of selectedTranscripts) {
             try {
-                const url = `${SUPABASE_URL}/storage/v1/object/public/transcripts/${transcript.path}`;
-                const res = await fetch(url);
-                if (res.ok) {
-                    const buf = await res.arrayBuffer();
-                    const embeddedPages = await pdfDoc.embedPdf(buf);
+                const buf = await getFileBuffer(transcript.path);
+                const embeddedPages = await pdfDoc.embedPdf(buf);
 
-                    for (const embeddedPage of embeddedPages) {
-                        const page = pdfDoc.addPage([595, 842]); // Standard A4
-                        const { width, height } = embeddedPage;
+                for (const embeddedPage of embeddedPages) {
+                    const page = pdfDoc.addPage([595, 842]); // Standard A4
+                    const { width, height } = embeddedPage;
 
-                        // Scale proportionally to fit within A4
-                        const scale = Math.min(595 / width, 842 / height);
-                        const scaledWidth = width * scale;
-                        const scaledHeight = height * scale;
+                    // Scale proportionally to fit within A4
+                    const scale = Math.min(595 / width, 842 / height);
+                    const scaledWidth = width * scale;
+                    const scaledHeight = height * scale;
 
-                        // Center horizontally & vertically on A4 page
-                        const x = (595 - scaledWidth) / 2;
-                        const y = (842 - scaledHeight) / 2;
+                    // Center horizontally & vertically on A4 page
+                    const x = (595 - scaledWidth) / 2;
+                    const y = (842 - scaledHeight) / 2;
 
-                        page.drawPage(embeddedPage, {
-                            x,
-                            y,
-                            width: scaledWidth,
-                            height: scaledHeight,
-                        });
-                    }
+                    page.drawPage(embeddedPage, {
+                        x,
+                        y,
+                        width: scaledWidth,
+                        height: scaledHeight,
+                    });
                 }
             } catch (e) {
                 console.error("Transcripts error:", e);
@@ -75,32 +70,28 @@ export async function generateApplicationPdf(data: any): Promise<{ url: string, 
 
         for (const letter of selectedLetters) {
             try {
-                const url = `${SUPABASE_URL}/storage/v1/object/public/recommendationLetter/${letter.path}`;
-                const res = await fetch(url);
-                if (res.ok) {
-                    const buf = await res.arrayBuffer();
-                    const embeddedPages = await pdfDoc.embedPdf(buf);
+                const buf = await getFileBuffer(letter.path);
+                const embeddedPages = await pdfDoc.embedPdf(buf);
 
-                    for (const embeddedPage of embeddedPages) {
-                        const page = pdfDoc.addPage([595, 842]); // Standard A4
-                        const { width, height } = embeddedPage;
+                for (const embeddedPage of embeddedPages) {
+                    const page = pdfDoc.addPage([595, 842]); // Standard A4
+                    const { width, height } = embeddedPage;
 
-                        // Scale proportionally to fit within A4
-                        const scale = Math.min(595 / width, 842 / height);
-                        const scaledWidth = width * scale;
-                        const scaledHeight = height * scale;
+                    // Scale proportionally to fit within A4
+                    const scale = Math.min(595 / width, 842 / height);
+                    const scaledWidth = width * scale;
+                    const scaledHeight = height * scale;
 
-                        // Center horizontally & vertically on A4 page
-                        const x = (595 - scaledWidth) / 2;
-                        const y = (842 - scaledHeight) / 2;
+                    // Center horizontally & vertically on A4 page
+                    const x = (595 - scaledWidth) / 2;
+                    const y = (842 - scaledHeight) / 2;
 
-                        page.drawPage(embeddedPage, {
-                            x,
-                            y,
-                            width: scaledWidth,
-                            height: scaledHeight,
-                        });
-                    }
+                    page.drawPage(embeddedPage, {
+                        x,
+                        y,
+                        width: scaledWidth,
+                        height: scaledHeight,
+                    });
                 }
             } catch (e) {
                 console.error("Letter error:", e);

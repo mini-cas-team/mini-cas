@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
 import {
     Plus,
     Trash2,
@@ -9,9 +8,10 @@ import {
     LayoutDashboard,
     HelpCircle,
     Users,
-    ChevronRight,
-    AdminIcon
+    ChevronRight
 } from 'lucide-react';
+import { getSchoolByName, getFirstSchool, addSchoolQuestion, deleteSchoolQuestion } from '@/lib/schoolActions';
+import { getSchoolQuestions } from '@/lib/studentActions';
 
 export default function SchoolDashboard() {
     const [currentSchool, setCurrentSchool] = useState<any>(null);
@@ -32,23 +32,20 @@ export default function SchoolDashboard() {
             const userNameCookie = getCookie('userName');
             const schoolName = userNameCookie ? decodeURIComponent(userNameCookie) : null;
 
-            let query = supabase.from('schools').select('*');
             if (schoolName) {
-                query = query.eq('name', schoolName);
-            }
-
-            const { data: schools } = await query.limit(1);
-
-            if (schools && schools.length > 0) {
-                setCurrentSchool(schools[0]);
-                loadQuestions(schools[0].id);
-            } else if (schoolName) {
-                // fallback to first school if not found
-                const { data: fallbackSchools } = await supabase.from('schools').select('*').limit(1);
-                if (fallbackSchools && fallbackSchools.length > 0) {
-                    setCurrentSchool(fallbackSchools[0]);
-                    loadQuestions(fallbackSchools[0].id);
+                const res = await getSchoolByName(schoolName);
+                if (res.success && res.data) {
+                    setCurrentSchool(res.data);
+                    loadQuestions(res.data.id);
+                    return;
                 }
+            }
+            
+            // fallback to first school if not found
+            const fallbackRes = await getFirstSchool();
+            if (fallbackRes.success && fallbackRes.data) {
+                setCurrentSchool(fallbackRes.data);
+                loadQuestions(fallbackRes.data.id);
             }
         }
         loadProfile();
@@ -56,42 +53,32 @@ export default function SchoolDashboard() {
 
     async function loadQuestions(schoolId: number) {
         setIsLoading(true);
-        const { data, error } = await supabase
-            .from('school_questions')
-            .select('*')
-            .eq('school_id', schoolId)
-            .order('sort_order', { ascending: true });
-
-        if (!error) setQuestions(data || []);
+        const res = await getSchoolQuestions(schoolId);
+        if (res.success && res.data) {
+            setQuestions(res.data);
+        }
         setIsLoading(false);
     }
 
     const addQuestion = async () => {
         if (!newQuestionContent.trim() || !currentSchool) return;
 
-        const { data, error } = await supabase
-            .from('school_questions')
-            .insert({
-                school_id: currentSchool.id,
-                content: newQuestionContent.trim(),
-                sort_order: questions.length
-            })
-            .select()
-            .single();
+        const res = await addSchoolQuestion(
+            currentSchool.id,
+            newQuestionContent.trim(),
+            questions.length
+        );
 
-        if (!error) {
-            setQuestions([...questions, data]);
+        if (res.success && res.data) {
+            setQuestions([...questions, res.data]);
             setNewQuestionContent('');
         }
     };
 
     const deleteQuestion = async (id: number) => {
-        const { error } = await supabase
-            .from('school_questions')
-            .delete()
-            .eq('id', id);
+        const res = await deleteSchoolQuestion(id);
 
-        if (!error) {
+        if (res.success) {
             setQuestions(questions.filter(q => q.id !== id));
         }
     };
