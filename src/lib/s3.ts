@@ -2,13 +2,13 @@ import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } fro
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 const s3Config: any = {
-  region: process.env.NEXT_AWS_REGION || process.env.AWS_REGION || 'us-east-1',
+  region: process.env.MINI_CAS_AWS_REGION || process.env.AWS_REGION || 'us-east-1',
 };
 
-if (process.env.NEXT_AWS_ACCESS_KEY_ID && process.env.NEXT_AWS_SECRET_ACCESS_KEY) {
+if (process.env.MINI_CAS_AWS_ACCESS_KEY_ID && process.env.MINI_CAS_AWS_SECRET_ACCESS_KEY) {
   s3Config.credentials = {
-    accessKeyId: process.env.NEXT_AWS_ACCESS_KEY_ID,
-    secretAccessKey: process.env.NEXT_AWS_SECRET_ACCESS_KEY,
+    accessKeyId: process.env.MINI_CAS_AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.MINI_CAS_AWS_SECRET_ACCESS_KEY,
   };
 }
 

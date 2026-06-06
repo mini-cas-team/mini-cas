@@ -108,9 +108,9 @@ Since `.env.local` is ignored by Git, you must configure secrets in the AWS Ampl
 4. In **App Settings > Environment variables**, click **Manage variables** and add the following keys matching your local configuration:
    * `DATABASE_URL`
    * `S3_BUCKET_NAME`
-   * `NEXT_AWS_REGION` (Amplify reserves the `AWS_` prefix, so use `NEXT_AWS_REGION` instead of `AWS_REGION`)
-   * `NEXT_AWS_ACCESS_KEY_ID` (Use `NEXT_AWS_ACCESS_KEY_ID` instead of `AWS_ACCESS_KEY_ID`)
-   * `NEXT_AWS_SECRET_ACCESS_KEY` (Use `NEXT_AWS_SECRET_ACCESS_KEY` instead of `AWS_SECRET_ACCESS_KEY`)
+   * `MINI_CAS_AWS_REGION` (Amplify reserves the `AWS_` prefix, so use `MINI_CAS_AWS_REGION` instead of `AWS_REGION`)
+   * `MINI_CAS_AWS_ACCESS_KEY_ID` (Use `MINI_CAS_AWS_ACCESS_KEY_ID` instead of `AWS_ACCESS_KEY_ID`)
+   * `MINI_CAS_AWS_SECRET_ACCESS_KEY` (Use `MINI_CAS_AWS_SECRET_ACCESS_KEY` instead of `AWS_SECRET_ACCESS_KEY`)
 5. Click **Save and Deploy**.
 
 Amplify will automatically build, provision, and host the Next.js application at a secure public domain.
