@@ -59,7 +59,7 @@ npm run db:reset
 ```
 
 ### 5. Onboard Test Student Records (Optional)
-To quickly populate your local database and S3 bucket with test records, transcripts, and recommendation letters, run the onboarding script command:
+To quickly populate your AWS RDS database and S3 bucket with test records, transcripts, and recommendation letters, run the onboarding script command:
 ```bash
 npm run db:onboard
 ```
