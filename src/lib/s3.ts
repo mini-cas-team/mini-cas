@@ -1,10 +1,18 @@
 import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
-// S3Client automatically resolves credentials via process.env (like AWS_PROFILE, AWS_ACCESS_KEY_ID, etc.)
-export const s3 = new S3Client({
-  region: process.env.AWS_REGION || 'us-east-1',
-});
+const s3Config: any = {
+  region: process.env.NEXT_AWS_REGION || process.env.AWS_REGION || 'us-east-1',
+};
+
+if (process.env.NEXT_AWS_ACCESS_KEY_ID && process.env.NEXT_AWS_SECRET_ACCESS_KEY) {
+  s3Config.credentials = {
+    accessKeyId: process.env.NEXT_AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.NEXT_AWS_SECRET_ACCESS_KEY,
+  };
+}
+
+export const s3 = new S3Client(s3Config);
 
 const BUCKET_NAME = process.env.S3_BUCKET_NAME || 'mini-cas-docs-5d904b5f';
 

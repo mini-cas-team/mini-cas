@@ -13,9 +13,18 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false }
 });
 
-const s3 = new S3Client({
-  region: process.env.AWS_REGION || 'us-east-1',
-});
+const s3Config = {
+  region: process.env.NEXT_AWS_REGION || process.env.AWS_REGION || 'us-east-1',
+};
+
+if (process.env.NEXT_AWS_ACCESS_KEY_ID && process.env.NEXT_AWS_SECRET_ACCESS_KEY) {
+  s3Config.credentials = {
+    accessKeyId: process.env.NEXT_AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.NEXT_AWS_SECRET_ACCESS_KEY,
+  };
+}
+
+const s3 = new S3Client(s3Config);
 
 const BUCKET_NAME = process.env.S3_BUCKET_NAME || 'mini-cas-docs-5d904b5f';
 
