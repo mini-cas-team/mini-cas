@@ -83,8 +83,8 @@ export default function RecommendLetterTab() {
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
             <div className="flex justify-between items-center mb-6">
                 <div>
-                    <h2 className="text-2xl font-bold text-gray-900 mb-2">Recommendation Letters</h2>
-                    <p className="text-gray-500">Upload and manage your recommendation letters (PDF/Word).</p>
+                    <h2 className="text-2xl font-bold text-gray-900 mb-2">Academic Recommendation Letters</h2>
+                    <p className="text-gray-500">Upload and manage your academic recommendation letters (PDF/Word).</p>
                 </div>
                 <label className={`flex items-center gap-2 px-4 py-2 font-medium rounded-xl transition-colors shadow-sm ${uploading ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-blue-50 text-blue-700 hover:bg-blue-100 cursor-pointer'}`}>
                     {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UploadCloud className="w-4 h-4" />}
@@ -96,7 +96,7 @@ export default function RecommendLetterTab() {
             <div className="space-y-3">
                 {letters.length === 0 ? (
                     <div className="text-center py-10 text-gray-500 border-2 border-dashed border-gray-200 rounded-xl bg-gray-50/50">
-                        No recommendation letters uploaded yet.
+                        No academic recommendation letters uploaded yet.
                     </div>
                 ) : (
                     letters.map((letter, index) => (
@@ -107,7 +107,7 @@ export default function RecommendLetterTab() {
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="p-3 bg-white rounded-xl shadow-sm hover:shadow hover:ring-2 hover:ring-blue-500 transition-all cursor-pointer group"
-                                    title="View Recommendation Letter"
+                                    title="View Academic Recommendation Letter"
                                 >
                                     <FileText className="w-6 h-6 text-blue-600 group-hover:scale-110 transition-transform" />
                                 </a>

@@ -84,7 +84,7 @@ function StudentDashboard() {
                                     }`}
                             >
                                 <GraduationCap className="w-4 h-4" />
-                                Exam Score
+                                Standard Test Scores
                             </button>
                             <button
                                 onClick={() => handleTabChange('transcripts')}
@@ -100,7 +100,7 @@ function StudentDashboard() {
                                     }`}
                             >
                                 <FileText className="w-4 h-4" />
-                                Recommend Letter
+                                Academic Recommendation Letters
                             </button>
                         </div>
                     </div>

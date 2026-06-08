@@ -343,7 +343,7 @@ export default function ApplyTab() {
 
                     {/* Exam Scores */}
                     <div className="flex flex-col gap-4 px-5 py-4 bg-white border border-gray-200 rounded-xl shadow-sm w-full">
-                        <span className="font-semibold text-gray-700">Exam Scores</span>
+                        <span className="font-semibold text-gray-700">Standard Test Scores</span>
                         <div className="flex gap-6">
                             <label className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
                                 <input
@@ -375,7 +375,7 @@ export default function ApplyTab() {
                             className="flex items-center gap-3 px-5 py-3 bg-white border border-gray-200 rounded-xl font-semibold text-gray-700 hover:bg-gray-50 transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 w-full justify-between"
                         >
                             <div className="flex items-center gap-2">
-                                Select Recommendation Letters
+                                Select Academic Recommendation Letters
                                 {selectedLetterPaths.length > 0 && (
                                     <span className="bg-indigo-100 text-indigo-700 py-0.5 px-2.5 rounded-full text-xs ml-1">
                                         {selectedLetterPaths.length}

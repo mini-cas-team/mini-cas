@@ -10,7 +10,7 @@ export default function StorageTab() {
 
             <div className="grid gap-6">
                 <ProvisionBlock title="Transcripts Documents" targetName="transcripts" type="bucket" />
-                <ProvisionBlock title="Recommendation Letters" targetName="recommendationLetter" type="bucket" />
+                <ProvisionBlock title="Academic Recommendation Letters" targetName="recommendationLetter" type="bucket" />
             </div>
         </div>
     );
