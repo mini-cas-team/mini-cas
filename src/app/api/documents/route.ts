@@ -15,6 +15,12 @@ export async function GET(req: NextRequest) {
         return NextResponse.redirect(url);
     } catch (e: any) {
         console.error('Failed to resolve document URL from S3:', e);
-        return new NextResponse(`Error loading document: ${e.message}`, { status: 500 });
+        const envKeys = Object.keys(process.env).filter(k => 
+            k.includes('DATABASE') || k.includes('S3') || k.includes('AWS') || k.includes('MINI')
+        );
+        return new NextResponse(
+            `Error loading document: ${e.message}. (Loaded Env Keys: ${envKeys.join(', ')})`, 
+            { status: 500 }
+        );
     }
 }
