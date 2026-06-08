@@ -15,11 +15,12 @@ export async function GET(req: NextRequest) {
         return NextResponse.redirect(url);
     } catch (e: any) {
         console.error('Failed to resolve document URL from S3:', e);
-        const envKeys = Object.keys(process.env).filter(k => 
-            k.includes('DATABASE') || k.includes('S3') || k.includes('AWS') || k.includes('MINI')
-        );
+        const key = process.env.MINI_CAS_AWS_ACCESS_KEY_ID;
+        const secret = process.env.MINI_CAS_AWS_SECRET_ACCESS_KEY;
+        const keyStatus = key ? `${key.substring(0, 4)}... (len: ${key.length})` : 'undefined/empty';
+        const secretStatus = secret ? `present (len: ${secret.length})` : 'undefined/empty';
         return new NextResponse(
-            `Error loading document: ${e.message}. (Loaded Env Keys: ${envKeys.join(', ')})`, 
+            `Error loading document: ${e.message}. (AccessKey: ${keyStatus}, SecretKey: ${secretStatus})`, 
             { status: 500 }
         );
     }
