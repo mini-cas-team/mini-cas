@@ -112,7 +112,7 @@ async function run() {
 
     // 4. Create new transcript metadata item
     const newTranscript = {
-      name: 'Official Transcript (Columbia).pdf',
+      name: 'Academic Transcript (Columbia).pdf',
       path: fileKey,
       size: (pdfBuffer.length / 1024 / 1024).toFixed(2) + ' MB',
       date: new Date().toLocaleDateString()

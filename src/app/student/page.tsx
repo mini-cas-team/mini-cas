@@ -92,7 +92,7 @@ function StudentDashboard() {
                                     }`}
                             >
                                 <FileText className="w-4 h-4" />
-                                Transcripts
+                                Academic Transcripts
                             </button>
                             <button
                                 onClick={() => handleTabChange('recommend')}
@@ -100,7 +100,7 @@ function StudentDashboard() {
                                     }`}
                             >
                                 <FileText className="w-4 h-4" />
-                                Academic Recommendation Letters
+                                Recommendattion Letters
                             </button>
                         </div>
                     </div>

@@ -375,7 +375,7 @@ export default function ApplyTab() {
                             className="flex items-center gap-3 px-5 py-3 bg-white border border-gray-200 rounded-xl font-semibold text-gray-700 hover:bg-gray-50 transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 w-full justify-between"
                         >
                             <div className="flex items-center gap-2">
-                                Select Academic Recommendation Letters
+                                Select Recommendattion Letters
                                 {selectedLetterPaths.length > 0 && (
                                     <span className="bg-indigo-100 text-indigo-700 py-0.5 px-2.5 rounded-full text-xs ml-1">
                                         {selectedLetterPaths.length}
@@ -437,7 +437,7 @@ export default function ApplyTab() {
                             className="flex items-center gap-3 px-5 py-3 bg-white border border-gray-200 rounded-xl font-semibold text-gray-700 hover:bg-gray-50 transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 w-full justify-between"
                         >
                             <div className="flex items-center gap-2">
-                                Select Official Transcripts
+                                Select Academic Transcripts
                                 {selectedTranscriptPaths.length > 0 && (
                                     <span className="bg-indigo-100 text-indigo-700 py-0.5 px-2.5 rounded-full text-xs ml-1">
                                         {selectedTranscriptPaths.length}

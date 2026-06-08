@@ -9,8 +9,8 @@ export default function StorageTab() {
             <p className="text-slate-500 mb-8">Click run to check existence or provision Supabase Storage buckets.</p>
 
             <div className="grid gap-6">
-                <ProvisionBlock title="Transcripts Documents" targetName="transcripts" type="bucket" />
-                <ProvisionBlock title="Academic Recommendation Letters" targetName="recommendationLetter" type="bucket" />
+                <ProvisionBlock title="Academic Transcripts" targetName="transcripts" type="bucket" />
+                <ProvisionBlock title="Recommendattion Letters" targetName="recommendationLetter" type="bucket" />
             </div>
         </div>
     );
