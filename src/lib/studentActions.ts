@@ -12,9 +12,19 @@ export async function getStudentByName(name: string) {
   }
 }
 
-export async function createStudent(name: string) {
+export async function getStudentByEmail(email: string) {
   try {
-    const res = await query('INSERT INTO students (name) VALUES ($1) RETURNING *', [name]);
+    const res = await query('SELECT * FROM students WHERE email = $1', [email.trim().toLowerCase()]);
+    return { success: true, data: res.rows[0] || null };
+  } catch (error: any) {
+    console.error('Failed to get student by email:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+export async function createStudent(name: string, email: string) {
+  try {
+    const res = await query('INSERT INTO students (name, email) VALUES ($1, $2) RETURNING *', [name, email.trim().toLowerCase()]);
     return { success: true, data: res.rows[0] };
   } catch (error: any) {
     console.error('Failed to create student:', error);

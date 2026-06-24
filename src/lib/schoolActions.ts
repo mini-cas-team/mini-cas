@@ -84,3 +84,13 @@ export async function fetchPdfAsBase64(url: string) {
     throw error;
   }
 }
+
+export async function checkSchoolDuplicate(name: string) {
+  try {
+    const res = await query('SELECT id FROM schools WHERE LOWER(name) = $1', [name.trim().toLowerCase()]);
+    return { success: true, duplicate: res.rows.length > 0 };
+  } catch (e: any) {
+    console.error("Failed to check school duplicate:", e);
+    return { success: false, error: e.message };
+  }
+}

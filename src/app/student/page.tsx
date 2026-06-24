@@ -2,29 +2,25 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { AlertCircle, FileText, User, GraduationCap, Send, Save, Check } from 'lucide-react';
+import { AlertCircle, FileText, User, GraduationCap, Send, Save, Check, LogOut } from 'lucide-react';
 import { StudentProvider, useStudentContext } from '@/student/context/StudentContext';
+import { logoutAction } from '@/lib/authActions';
 import PersonalInfoTab from '@/student/components/tabs/PersonalInfoTab';
 import ExamScoreTab from '@/student/components/tabs/ExamScoreTab';
 import RecommendLetterTab from '@/student/components/tabs/RecommendLetterTab';
 import TranscriptsTab from '@/student/components/tabs/TranscriptsTab';
 import ApplyTab from '@/student/components/tabs/ApplyTab';
 
-function StudentDashboard() {
+function StudentDashboard({ userName }: { userName: string }) {
     const router = useRouter();
     const { isDirty, saveChanges, activeTab, setActiveTab } = useStudentContext();
     const [pendingTab, setPendingTab] = useState<string | null>(null);
-    const [userName, setUserName] = useState('');
 
-    useEffect(() => {
-        // Basic auth check from cookie
-        const match = document.cookie.match(/(^| )userName=([^;]+)/);
-        if (!match) {
-            router.push('/');
-        } else {
-            setUserName(decodeURIComponent(match[2]));
-        }
-    }, [router]);
+    const handleLogout = async () => {
+        await logoutAction();
+        router.push('/login?type=student');
+        router.refresh();
+    };
 
     const handleTabChange = (newTab: string) => {
         if (newTab === activeTab) return;
@@ -117,6 +113,16 @@ function StudentDashboard() {
                         </button>
                     </div>
                 </nav>
+
+                <div className="p-4 border-t border-gray-100 mt-auto">
+                    <button
+                        onClick={handleLogout}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors cursor-pointer"
+                    >
+                        <LogOut className="w-4 h-4" />
+                        Sign Out
+                    </button>
+                </div>
             </aside>
 
             {/* Main Content Area */}
@@ -177,9 +183,40 @@ function StudentDashboard() {
 }
 
 export default function StudentSystem() {
+    const router = useRouter();
+    const [userName, setUserName] = useState<string | null>(null);
+    const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+
+    useEffect(() => {
+        const getCookie = (name: string) => {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop()?.split(';').shift();
+            return null;
+        };
+
+        const uName = getCookie('userName');
+        const uType = getCookie('userType');
+
+        if (uName && uType === 'student') {
+            setUserName(decodeURIComponent(uName));
+            setIsCheckingAuth(false);
+        } else {
+            router.push('/login?type=student');
+        }
+    }, [router]);
+
+    if (isCheckingAuth) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="text-gray-500 animate-pulse">Loading applicant portal...</div>
+            </div>
+        );
+    }
+
     return (
         <StudentProvider>
-            <StudentDashboard />
+            <StudentDashboard userName={userName || 'Student'} />
         </StudentProvider>
     );
 }

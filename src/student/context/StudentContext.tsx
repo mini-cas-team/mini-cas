@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { getStudentByName, createStudent, updateStudent } from '@/lib/studentActions';
+import { getStudentByEmail, createStudent, updateStudent } from '@/lib/studentActions';
 
 type Tab = 'personal' | 'exam' | 'transcripts' | 'recommend' | 'apply';
 
@@ -53,18 +53,20 @@ export function StudentProvider({ children }: { children: ReactNode }) {
 
     useEffect(() => {
         async function loadData() {
-            const match = document.cookie.match(/(^| )userName=([^;]+)/);
-            if (!match) return;
-            const userName = decodeURIComponent(match[2]);
+            const matchEmail = document.cookie.match(/(^| )userEmail=([^;]+)/);
+            const matchName = document.cookie.match(/(^| )userName=([^;]+)/);
+            if (!matchEmail) return;
+            const userEmail = decodeURIComponent(matchEmail[2]);
+            const userName = matchName ? decodeURIComponent(matchName[2]) : '';
 
-            const res = await getStudentByName(userName);
+            const res = await getStudentByEmail(userEmail);
 
             if (res.success && res.data) {
                 const data = res.data;
                 const loadedData: StudentData = {
                     id: data.id,
-                    name: data.name || userName,
-                    email: data.email || '',
+                    name: data.name || userName || '',
+                    email: data.email || userEmail || '',
                     address: data.address || '',
                     college_university: data.college_university || '',
                     major: data.major || '',
@@ -76,14 +78,14 @@ export function StudentProvider({ children }: { children: ReactNode }) {
                 setOriginalData(loadedData);
             } else {
                 // Create empty record if it doesn't exist
-                const createRes = await createStudent(userName);
+                const createRes = await createStudent(userName || 'Student', userEmail);
 
                 if (createRes.success && createRes.data) {
                     const insertData = createRes.data;
                     const newData = {
                         id: insertData.id,
-                        name: insertData.name,
-                        email: '',
+                        name: insertData.name || userName || '',
+                        email: insertData.email || userEmail || '',
                         address: '',
                         college_university: '',
                         major: '',
@@ -96,13 +98,13 @@ export function StudentProvider({ children }: { children: ReactNode }) {
                 } else if (createRes.code === '23505') {
                     // React Strict mode double-fire race condition caught! 
                     // The record was created by the parallel request. Let's just fetch it.
-                    const retryRes = await getStudentByName(userName);
+                    const retryRes = await getStudentByEmail(userEmail);
                     if (retryRes.success && retryRes.data) {
                         const retryData = retryRes.data;
                         const loadedData: StudentData = {
                             id: retryData.id,
-                            name: retryData.name || userName,
-                            email: retryData.email || '',
+                            name: retryData.name || userName || '',
+                            email: retryData.email || userEmail || '',
                             address: retryData.address || '',
                             college_university: retryData.college_university || '',
                             major: retryData.major || '',
@@ -117,7 +119,7 @@ export function StudentProvider({ children }: { children: ReactNode }) {
                     console.error("Failed to auto-create student record:", createRes.error);
                     alert(`Database error creating student record: ${createRes.error || 'Unknown Error'}`);
                     // Fallback visually so it's not permanently empty
-                    setStudentData(prev => ({ ...prev, name: userName }));
+                    setStudentData(prev => ({ ...prev, name: userName, email: userEmail }));
                 }
             }
             setLoading(false);

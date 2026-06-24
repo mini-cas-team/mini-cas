@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import {
     Plus,
     Trash2,
@@ -8,30 +9,29 @@ import {
     LayoutDashboard,
     HelpCircle,
     Users,
-    ChevronRight
+    ChevronRight,
+    LogOut
 } from 'lucide-react';
 import { getSchoolByName, getFirstSchool, addSchoolQuestion, deleteSchoolQuestion } from '@/lib/schoolActions';
 import { getSchoolQuestions } from '@/lib/studentActions';
+import { logoutAction } from '@/lib/authActions';
 
-export default function SchoolDashboard() {
+function SchoolDashboardContent({ schoolName }: { schoolName: string }) {
+    const router = useRouter();
     const [currentSchool, setCurrentSchool] = useState<any>(null);
     const [activeTab, setActiveTab] = useState('questions');
     const [questions, setQuestions] = useState<any[]>([]);
     const [newQuestionContent, setNewQuestionContent] = useState('');
     const [isLoading, setIsLoading] = useState(true);
 
+    const handleLogout = async () => {
+        await logoutAction();
+        router.push('/login?type=school');
+        router.refresh();
+    };
+
     useEffect(() => {
         async function loadProfile() {
-            const getCookie = (name: string) => {
-                const value = `; ${document.cookie}`;
-                const parts = value.split(`; ${name}=`);
-                if (parts.length === 2) return parts.pop()?.split(';').shift();
-                return null;
-            };
-
-            const userNameCookie = getCookie('userName');
-            const schoolName = userNameCookie ? decodeURIComponent(userNameCookie) : null;
-
             if (schoolName) {
                 const res = await getSchoolByName(schoolName);
                 if (res.success && res.data) {
@@ -49,7 +49,7 @@ export default function SchoolDashboard() {
             }
         }
         loadProfile();
-    }, []);
+    }, [schoolName]);
 
     async function loadQuestions(schoolId: number) {
         setIsLoading(true);
@@ -144,8 +144,16 @@ export default function SchoolDashboard() {
                         <span className="text-sm font-bold text-gray-800">{currentSchool?.name || 'School'} Application Questions</span>
                     </div>
                     <div className="flex items-center gap-4">
-                        <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
+                        <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors" title="Settings">
                             <Settings className="w-5 h-5" />
+                        </button>
+                        <button
+                            onClick={handleLogout}
+                            className="flex items-center gap-1.5 p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors text-sm font-semibold cursor-pointer"
+                            title="Sign Out"
+                        >
+                            <LogOut className="w-5 h-5" />
+                            <span>Sign Out</span>
                         </button>
                     </div>
                 </header>
@@ -226,4 +234,39 @@ export default function SchoolDashboard() {
             </div>
         </div>
     );
+}
+
+export default function SchoolDashboard() {
+    const router = useRouter();
+    const [schoolName, setSchoolName] = useState<string | null>(null);
+    const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+
+    useEffect(() => {
+        const getCookie = (name: string) => {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop()?.split(';').shift();
+            return null;
+        };
+
+        const uName = getCookie('userName');
+        const uType = getCookie('userType');
+
+        if (uName && uType && uType !== 'student' && uType !== 'admin') {
+            setSchoolName(decodeURIComponent(uType));
+            setIsCheckingAuth(false);
+        } else {
+            router.push('/login?type=school');
+        }
+    }, [router]);
+
+    if (isCheckingAuth) {
+        return (
+            <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center">
+                <div className="text-gray-500 animate-pulse">Loading school portal...</div>
+            </div>
+        );
+    }
+
+    return <SchoolDashboardContent schoolName={schoolName || 'School'} />;
 }

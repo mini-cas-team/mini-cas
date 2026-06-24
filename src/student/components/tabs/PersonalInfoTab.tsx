@@ -22,9 +22,9 @@ export default function PersonalInfoTab() {
                         <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
                         <input
                             type="text"
-                            disabled
                             value={studentData.name}
-                            className="w-full px-4 py-3 bg-gray-100 border border-gray-200 text-gray-500 cursor-not-allowed rounded-xl outline-none"
+                            onChange={(e) => handleChange('name', e.target.value)}
+                            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                         />
                     </div>
                     <div>
