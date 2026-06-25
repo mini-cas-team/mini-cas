@@ -12,6 +12,11 @@ frontend:
         - echo "MINI_CAS_AWS_REGION=${MINI_CAS_AWS_REGION}" >> .env.production
         - echo "MINI_CAS_AWS_ACCESS_KEY_ID=${MINI_CAS_AWS_ACCESS_KEY_ID}" >> .env.production
         - echo "MINI_CAS_AWS_SECRET_ACCESS_KEY=${MINI_CAS_AWS_SECRET_ACCESS_KEY}" >> .env.production
+        - echo "SMTP_HOST=${SMTP_HOST}" >> .env.production
+        - echo "SMTP_PORT=${SMTP_PORT}" >> .env.production
+        - echo "SMTP_USER=${SMTP_USER}" >> .env.production
+        - echo "SMTP_PASSWORD=${SMTP_PASSWORD}" >> .env.production
+        - echo "SMTP_FROM=${SMTP_FROM}" >> .env.production
         - npm run build
   artifacts:
     baseDirectory: .next

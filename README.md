@@ -134,7 +134,7 @@ Once the deployment starts, you can monitor its progress in real-time in the AWS
 Since `.env.local` is ignored by Git, you must define your environment variables in the Amplify Console so they are injected at build/runtime.
 
 #### To Add or Update Variables:
-1. In the AWS Amplify sidebar, navigate to **App settings > Environment variables**.
+1. In the AWS Amplify sidebar, navigate to **Hosting > Environment variables**.
 2. Click **Manage variables** / **Add variable**.
 3. Add the following keys matching your configurations:
    * `DATABASE_URL`: Your AWS RDS connection string.
@@ -149,6 +149,7 @@ Since `.env.local` is ignored by Git, you must define your environment variables
    * `SMTP_FROM`: Your sender name and email (e.g., `"Mini-CAS <noreply@yourdomain.com>"`).
 4. Click **Save**.
 5. ⚠️ **IMPORTANT**: After updating environment variables, you **must trigger a new deployment** for Next.js to compile the new values. Go to your branch page and click **Redeploy this version** (or push a new commit to GitHub).
+6. 💡 **Note on Build Spec (`amplify.yml`)**: Any new environment variable you add to the Amplify Console must be defined in the project's [amplify.yml](file:///home/personal/git/nodejs/mini-cas/amplify.yml) build script so it propagates to the Next.js runtime environment (written to `.env.production` during the build phase).
 
 ---
 

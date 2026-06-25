@@ -93,6 +93,7 @@ ${textContent}
     return true;
   } catch (err: any) {
     console.error(`❌ Failed to write simulated email log:`, err.message);
-    return false;
+    console.log(`📧 Fallback console output: Code for ${to} is ${code}`);
+    return true; // Return true so that read-only environments do not block the reset flow
   }
 }
