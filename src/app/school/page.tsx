@@ -252,7 +252,10 @@ export default function SchoolDashboard() {
         const uName = getCookie('userName');
         const uType = getCookie('userType');
 
-        if (uName && uType && uType !== 'student' && uType !== 'admin') {
+        if (uName && uType && uType === 'school') {
+            setSchoolName(decodeURIComponent(uName));
+            setIsCheckingAuth(false);
+        } else if (uName && uType && uType !== 'student' && uType !== 'admin') {
             setSchoolName(decodeURIComponent(uType));
             setIsCheckingAuth(false);
         } else {

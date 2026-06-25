@@ -122,11 +122,13 @@ function RegisterFormContent() {
 
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !password) return;
+    if ((type !== 'school' && !name.trim()) || !password) return;
 
-    // Resolve the final role type to save
-    const finalType = type === 'school' ? selectedSchool : type;
-    if (type === 'school' && finalType === 'select or add one') {
+    // Resolve the final role parameters to save
+    const finalType = type;
+    const finalName = type === 'school' ? selectedSchool : name;
+
+    if (type === 'school' && selectedSchool === 'select or add one') {
       setErrorMsg('Please select or add a school.');
       return;
     }
@@ -136,13 +138,15 @@ function RegisterFormContent() {
     setSuccessMsg(null);
 
     try {
-      const res = await registerAction(email, name, finalType, password);
+      const res = await registerAction(email, finalName, finalType, password);
       if (res.success) {
         setSuccessMsg('Account created successfully! Logging you in...');
         // Auto-login after successful registration
-        const logRes = await loginAction(email, password);
+        const logRes = await loginAction(email, password, finalType);
         if (logRes.success && logRes.type) {
-          const destination = (logRes.type === 'student' || logRes.type === 'admin') ? `/${logRes.type}` : '/school';
+          const destination = (logRes.type === 'student' || logRes.type === 'admin' || logRes.type === 'school') 
+            ? `/${logRes.type}` 
+            : '/school';
           router.push(destination);
           router.refresh();
         } else {
@@ -210,29 +214,31 @@ function RegisterFormContent() {
           </div>
         </div>
 
-        {/* 2. Full Name */}
-        <div>
-          <label htmlFor="name" className="block text-sm font-semibold text-gray-700 mb-2">
-            Full Name
-          </label>
-          <div className="relative">
-            <User className="absolute left-4 top-3.5 w-5 h-5 text-gray-400" />
-            <input
-              id="name"
-              type="text"
-              required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full pl-12 py-3 rounded-xl border border-gray-200 bg-white/50 backdrop-blur-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-              placeholder="e.g. Jane Doe"
-            />
+        {/* 2. Full Name (Only show for non-school users) */}
+        {type !== 'school' && (
+          <div>
+            <label htmlFor="name" className="block text-sm font-semibold text-gray-700 mb-2">
+              Full Name
+            </label>
+            <div className="relative">
+              <User className="absolute left-4 top-3.5 w-5 h-5 text-gray-400" />
+              <input
+                id="name"
+                type="text"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full pl-12 py-3 rounded-xl border border-gray-200 bg-white/50 backdrop-blur-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                placeholder="e.g. Jane Doe"
+              />
+            </div>
           </div>
-        </div>
+        )}
 
         {/* 3. Account Type */}
         <div>
           <label htmlFor="type" className="block text-sm font-semibold text-gray-700 mb-2">
-            {type === 'school' ? 'select or add one' : 'Account Type'}
+            {type === 'school' ? 'Institute Name' : 'Account Type'}
           </label>
           <div className="relative">
             {isPrefilledType ? (

@@ -2,6 +2,8 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
+
 import { LogIn, Key, Mail, AlertTriangle, CheckCircle, ArrowRight, Loader2 } from 'lucide-react';
 import { verifyEmailAction, loginAction } from '@/lib/authActions';
 
@@ -36,7 +38,7 @@ function LoginFormContent() {
     setIsVerifyingEmail(true);
     setErrorMsg(null);
     try {
-      const res = await verifyEmailAction(trimmed);
+      const res = await verifyEmailAction(trimmed, type);
       if (res.exists && res.active) {
         setIsPasswordEnabled(true);
         setEmailStatus('verified');
@@ -60,9 +62,9 @@ function LoginFormContent() {
     setIsLoggingIn(true);
     setErrorMsg(null);
     try {
-      const res = await loginAction(email, password);
+      const res = await loginAction(email, password, type);
       if (res.success && res.type) {
-        const destination = (res.type === 'student' || res.type === 'admin') ? `/${res.type}` : '/school';
+        const destination = (res.type === 'student' || res.type === 'admin' || res.type === 'school') ? `/${res.type}` : '/school';
         router.push(destination);
         router.refresh();
       } else {
@@ -160,9 +162,12 @@ function LoginFormContent() {
             <label htmlFor="password" className="text-sm font-semibold text-gray-700">
               Password
             </label>
-            {!isPasswordEnabled && email && (
-              <span className="text-xs text-gray-400 italic">Enter active email first</span>
-            )}
+            <Link
+              href={`/forgot-password?email=${encodeURIComponent(email)}&type=${encodeURIComponent(type)}`}
+              className="text-xs font-semibold text-blue-600 hover:underline hover:text-blue-700 transition-colors"
+            >
+              Forgot Password?
+            </Link>
           </div>
           <div className="relative">
             <Key className="absolute left-4 top-3.5 w-5 h-5 text-gray-400" />
