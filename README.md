@@ -90,27 +90,71 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ## Deployment to AWS (Amplify Hosting)
 
-AWS Amplify is the recommended method to deploy the Next.js SSR application.
+AWS Amplify Hosting is a fully managed service for deploying Next.js Server-Side Rendered (SSR) applications directly from your Git repository.
 
-### Step 1: Git Configuration
-Amplify deploys directly from your code repository. Commit and push all code changes (excluding `.env.local`):
-```bash
-git add .
-git commit -m "deploy: migrate to AWS RDS & S3"
-git push origin main
-```
+### 1. How Git Pushes Trigger Auto-Deployment
+AWS Amplify integrates with GitHub using webhooks. 
+* Once you connect your GitHub repository to AWS Amplify, AWS sets up a webhook on your GitHub repository.
+* Every time you execute `git push` to your connected branch (e.g. `main`), GitHub automatically notifies AWS Amplify.
+* AWS Amplify immediately spawns a new build pipeline container to pull your latest code, build it, and deploy it.
 
-### Step 2: Configure Environment Variables in AWS
-Since `.env.local` is ignored by Git, you must configure secrets in the AWS Amplify Console:
-1. Navigate to **AWS Amplify** in the AWS Console.
-2. Select **Create New App** and connect your Git repository.
-3. Select your branch (e.g. `main`).
-4. In **App Settings > Environment variables**, click **Manage variables** and add the following keys matching your local configuration:
-   * `DATABASE_URL`
-   * `S3_BUCKET_NAME`
-   * `MINI_CAS_AWS_REGION` (Amplify reserves the `AWS_` prefix, so use `MINI_CAS_AWS_REGION` instead of `AWS_REGION`)
-   * `MINI_CAS_AWS_ACCESS_KEY_ID` (Use `MINI_CAS_AWS_ACCESS_KEY_ID` instead of `AWS_ACCESS_KEY_ID`)
-   * `MINI_CAS_AWS_SECRET_ACCESS_KEY` (Use `MINI_CAS_AWS_SECRET_ACCESS_KEY` instead of `AWS_SECRET_ACCESS_KEY`)
-5. Click **Save and Deploy**.
+---
 
-Amplify will automatically build, provision, and host the Next.js application at a secure public domain.
+### 2. First-Time Setup in AWS Management Console
+
+1. Open the [AWS Management Console](https://console.aws.aws.amazon.com/) and search for **AWS Amplify**.
+2. Click **Create New App** (or **Host web app**).
+3. Select **GitHub** as the source repository provider and click **Next**.
+4. Authorize AWS Amplify to access your GitHub account. Select your organization and choose the `mini-cas` repository.
+5. Select the branch you want to track (e.g. `main`) and click **Next**.
+6. On the **App Settings** page:
+   * Amplify will automatically detect that this is a Next.js application and populate the correct build commands.
+   * Expand the **Advanced settings** section to configure environment variables immediately, or configure them later as described below.
+7. Click **Next** to review, then click **Save and Deploy**.
+
+---
+
+### 3. Watching the Deployment Process
+
+Once the deployment starts, you can monitor its progress in real-time in the AWS Amplify Console:
+
+1. Select your app from the AWS Amplify home page.
+2. Click on the branch (e.g., `main`) under progress.
+3. You will see a visual 4-stage pipeline tracker:
+   * **Provision**: AWS allocates a secure build container to run the deployment.
+   * **Build**: Runs `npm run build`. 
+     * *Tip*: You can click directly on the **Build** card to view the live stdout/stderr console logs. This is extremely helpful to debug compile errors, TypeScript errors, or Next.js static page generation issues.
+   * **Deploy**: Distributes your Next.js application, API routes, and Server Actions globally.
+   * **Verify**: Runs screenshots on multiple browsers to verify the homepage loaded correctly.
+
+---
+
+### 4. Configuring and Updating Environment Variables
+
+Since `.env.local` is ignored by Git, you must define your environment variables in the Amplify Console so they are injected at build/runtime.
+
+#### To Add or Update Variables:
+1. In the AWS Amplify sidebar, navigate to **App settings > Environment variables**.
+2. Click **Manage variables** / **Add variable**.
+3. Add the following keys matching your configurations:
+   * `DATABASE_URL`: Your AWS RDS connection string.
+   * `S3_BUCKET_NAME`: Your Amazon S3 bucket name.
+   * `MINI_CAS_AWS_REGION`: Your S3 region (e.g. `us-east-1`). *(Note: Amplify reserves `AWS_` prefix, hence the custom prefix).*
+   * `MINI_CAS_AWS_ACCESS_KEY_ID`: Your S3 access key.
+   * `MINI_CAS_AWS_SECRET_ACCESS_KEY`: Your S3 secret access key.
+   * `SMTP_HOST`: Your SMTP server hostname (optional, for email notifications).
+   * `SMTP_PORT`: Your SMTP server port (e.g., `587` or `465`).
+   * `SMTP_USER`: Your SMTP username.
+   * `SMTP_PASSWORD`: Your SMTP password.
+   * `SMTP_FROM`: Your sender name and email (e.g., `"Mini-CAS <noreply@yourdomain.com>"`).
+4. Click **Save**.
+5. ⚠️ **IMPORTANT**: After updating environment variables, you **must trigger a new deployment** for Next.js to compile the new values. Go to your branch page and click **Redeploy this version** (or push a new commit to GitHub).
+
+---
+
+### 5. Finding Your Deployed URL
+
+Once the pipeline successfully finishes the **Deploy** or **Verify** stage:
+1. Navigate back to the branch page of your app in the Amplify Console.
+2. Directly below the branch name (e.g. `main`), you will see a clickable public link (e.g., `https://main.d1a2b3c4d5e6f.amplifyapp.com`).
+3. Click this link to access your live production app! You can also configure a custom domain (e.g., `portal.minicas.edu`) under **App settings > Domain management**.
