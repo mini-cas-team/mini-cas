@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
@@ -21,15 +21,36 @@ function LoginFormContent() {
   const [emailStatus, setEmailStatus] = useState<'idle' | 'verified' | 'new_user'>('idle');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  const passwordInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (emailStatus === 'verified') {
+      setTimeout(() => passwordInputRef.current?.focus(), 50);
+    }
+  }, [emailStatus]);
+
   useEffect(() => {
     if (defaultType) {
       setType(defaultType);
     }
   }, [defaultType]);
 
+  useEffect(() => {
+    const isTimeout = searchParams.get('timeout') === 'true';
+    const emailParam = searchParams.get('email') || '';
+    if (isTimeout) {
+      setErrorMsg('Your session has expired due to inactivity. Please sign in again.');
+      if (emailParam) {
+        setEmail(decodeURIComponent(emailParam));
+        setIsPasswordEnabled(true);
+        setEmailStatus('verified');
+      }
+    }
+  }, [searchParams]);
+
   const handleEmailCheck = async (emailVal: string) => {
     const trimmed = emailVal.trim();
-    if (!trimmed || !trimmed.includes('@')) {
+    if (!trimmed) {
       setIsPasswordEnabled(false);
       setEmailStatus('idle');
       return;
@@ -55,8 +76,7 @@ function LoginFormContent() {
     }
   };
 
-  const handleLoginSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleLoginSubmit = async () => {
     if (!email.trim() || !password) return;
 
     setIsLoggingIn(true);
@@ -78,6 +98,15 @@ function LoginFormContent() {
     }
   };
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (emailStatus !== 'verified') {
+      await handleEmailCheck(email);
+    } else {
+      await handleLoginSubmit();
+    }
+  };
+
   return (
     <div className="bg-white/85 backdrop-blur-xl rounded-3xl shadow-2xl p-8 w-full max-w-md border border-white/50 relative overflow-hidden transition-all duration-300">
       <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-blue-600 to-indigo-600" />
@@ -90,7 +119,7 @@ function LoginFormContent() {
 
       <h1 className="text-3xl font-bold text-center text-gray-900 mb-2 tracking-tight">Mini-CAS Portal</h1>
       <p className="text-center text-gray-500 mb-8 text-sm">
-        Sign in to your <span className="font-semibold text-blue-600 capitalize">{type}</span> account
+        Sign in or create your <span className="font-semibold text-blue-600 capitalize">{type}</span> account
       </p>
 
       {errorMsg && (
@@ -105,12 +134,12 @@ function LoginFormContent() {
           <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5 text-amber-600" />
           <div className="flex-1">
             <span className="font-bold block">new user</span>
-            <span>This email is not registered or active. Please check spelling or contact admin.</span>
+            <span>This email is not registered or active. Redirecting you to create an account...</span>
           </div>
         </div>
       )}
 
-      <form onSubmit={handleLoginSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-6">
         <input type="hidden" name="type" value={type} />
 
         <div>
@@ -121,21 +150,16 @@ function LoginFormContent() {
             <Mail className="absolute left-4 top-3.5 w-5 h-5 text-gray-400" />
             <input
               id="email"
-              type="email"
+              type="text"
               required
+              disabled={emailStatus === 'verified'}
               value={email}
               onChange={(e) => {
                 setEmail(e.target.value);
                 if (isPasswordEnabled || emailStatus !== 'idle') {
                   setIsPasswordEnabled(false);
                   setEmailStatus('idle');
-                }
-              }}
-              onBlur={(e) => handleEmailCheck(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  handleEmailCheck(email);
+                  setPassword('');
                 }
               }}
               className={`w-full pl-12 pr-12 py-3 rounded-xl border outline-none transition-all bg-white/50 backdrop-blur-sm ${
@@ -144,7 +168,7 @@ function LoginFormContent() {
                   : emailStatus === 'new_user'
                   ? 'border-amber-500 focus:ring-2 focus:ring-amber-200'
                   : 'border-gray-200 focus:ring-2 focus:ring-blue-500'
-              }`}
+              } disabled:bg-gray-100/80 disabled:text-gray-500 disabled:cursor-not-allowed`}
               placeholder="you@university.edu"
             />
             <div className="absolute right-4 top-3.5 flex items-center justify-center">
@@ -157,7 +181,7 @@ function LoginFormContent() {
           </div>
         </div>
 
-        <div>
+        <div className={emailStatus === 'verified' ? 'animate-in fade-in duration-300 space-y-2 block' : 'hidden'}>
           <div className="flex justify-between items-center mb-2">
             <label htmlFor="password" className="text-sm font-semibold text-gray-700">
               Password
@@ -173,42 +197,78 @@ function LoginFormContent() {
             <Key className="absolute left-4 top-3.5 w-5 h-5 text-gray-400" />
             <input
               id="password"
+              ref={passwordInputRef}
               type="password"
-              required
-              disabled={!isPasswordEnabled}
+              required={emailStatus === 'verified'}
+              disabled={emailStatus !== 'verified'}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className={`w-full pl-12 py-3 rounded-xl border outline-none transition-all ${
-                isPasswordEnabled
-                  ? 'border-gray-200 bg-white/50 backdrop-blur-sm focus:ring-2 focus:ring-blue-500 cursor-text'
-                  : 'border-gray-100 bg-gray-50/50 text-gray-400 cursor-not-allowed'
-              }`}
+              className="w-full pl-12 py-3 rounded-xl border border-gray-200 bg-white/50 backdrop-blur-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
               placeholder="••••••••"
             />
           </div>
         </div>
 
-        <button
-          type="submit"
-          disabled={!isPasswordEnabled || isLoggingIn}
-          className={`w-full py-3.5 px-4 rounded-xl font-bold shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2 ${
-            isPasswordEnabled && !isLoggingIn
-              ? 'bg-blue-600 hover:bg-blue-700 text-white cursor-pointer hover:-translate-y-0.5'
-              : 'bg-gray-100 text-gray-400 cursor-not-allowed shadow-none'
-          }`}
-        >
-          {isLoggingIn ? (
-            <>
-              <Loader2 className="w-5 h-5 animate-spin" />
-              <span>Authenticating...</span>
-            </>
-          ) : (
-            <>
-              <span>Sign In</span>
-              <ArrowRight className="w-4 h-4" />
-            </>
-          )}
-        </button>
+        {emailStatus === 'verified' ? (
+          <div className="flex gap-4 animate-in fade-in duration-300">
+            <button
+              type="button"
+              onClick={() => {
+                setIsPasswordEnabled(false);
+                setEmailStatus('idle');
+                setPassword('');
+                setErrorMsg(null);
+                setTimeout(() => document.getElementById('email')?.focus(), 50);
+              }}
+              className="flex-1 py-3.5 px-4 rounded-xl font-bold shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 cursor-pointer hover:-translate-y-0.5"
+            >
+              <span>← Change Email</span>
+            </button>
+            <button
+              type="submit"
+              disabled={!password || isLoggingIn}
+              className={`flex-1 py-3.5 px-4 rounded-xl font-bold shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2 ${
+                password && !isLoggingIn
+                  ? 'bg-blue-600 hover:bg-blue-700 text-white cursor-pointer hover:-translate-y-0.5'
+                  : 'bg-gray-100 text-gray-400 cursor-not-allowed shadow-none'
+              }`}
+            >
+              {isLoggingIn ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span>Signing In...</span>
+                </>
+              ) : (
+                <>
+                  <span>Sign In</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
+            </button>
+          </div>
+        ) : (
+          <button
+            type="submit"
+            disabled={!email.trim() || isVerifyingEmail}
+            className={`w-full py-3.5 px-4 rounded-xl font-bold shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2 ${
+              email.trim() && !isVerifyingEmail
+                ? 'bg-blue-600 hover:bg-blue-700 text-white cursor-pointer hover:-translate-y-0.5'
+                : 'bg-gray-100 text-gray-400 cursor-not-allowed shadow-none'
+            }`}
+          >
+            {isVerifyingEmail ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span>Verifying Email...</span>
+              </>
+            ) : (
+              <>
+                <span>Continue</span>
+                <ArrowRight className="w-4 h-4" />
+              </>
+            )}
+          </button>
+        )}
       </form>
     </div>
   );

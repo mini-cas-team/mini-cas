@@ -122,7 +122,7 @@ function SchoolDashboardContent({ schoolName }: { schoolName: string }) {
                     </div>
                 </nav>
 
-                <div className="p-6 border-t border-gray-100 mt-auto">
+                <div className="p-6 border-t border-gray-100 mt-auto space-y-4">
                     <div className="flex items-center gap-3 p-2 rounded-xl bg-gray-50 border border-gray-100">
                         <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-xs">
                             {currentSchool?.name?.substring(0, 1) || 'S'}
@@ -132,6 +132,13 @@ function SchoolDashboardContent({ schoolName }: { schoolName: string }) {
                             <p className="text-[10px] text-gray-500 truncate">School Admin</p>
                         </div>
                     </div>
+                    <button
+                        onClick={handleLogout}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors cursor-pointer"
+                    >
+                        <LogOut className="w-4 h-4" />
+                        Sign Out
+                    </button>
                 </div>
             </div>
 
@@ -146,14 +153,6 @@ function SchoolDashboardContent({ schoolName }: { schoolName: string }) {
                     <div className="flex items-center gap-4">
                         <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors" title="Settings">
                             <Settings className="w-5 h-5" />
-                        </button>
-                        <button
-                            onClick={handleLogout}
-                            className="flex items-center gap-1.5 p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors text-sm font-semibold cursor-pointer"
-                            title="Sign Out"
-                        >
-                            <LogOut className="w-5 h-5" />
-                            <span>Sign Out</span>
                         </button>
                     </div>
                 </header>

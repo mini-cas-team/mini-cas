@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import SessionTimeoutManager from '@/components/SessionTimeoutManager';
 
 export const metadata: Metadata = {
   title: 'Mini-CAS Portal',
@@ -14,6 +15,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="antialiased bg-gray-50 text-gray-900 min-h-screen">
+        <SessionTimeoutManager />
         {children}
       </body>
     </html>
