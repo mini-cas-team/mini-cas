@@ -30,6 +30,10 @@ interface StudentContextProps {
     studentData: StudentData;
     setStudentData: React.Dispatch<React.SetStateAction<StudentData>>;
     loading: boolean;
+    applyingSchoolId: number | null;
+    setApplyingSchoolId: (id: number | null) => void;
+    currentView: 'selection' | 'submission';
+    setCurrentView: (view: 'selection' | 'submission') => void;
 }
 
 const StudentContext = createContext<StudentContextProps | undefined>(undefined);
@@ -38,6 +42,8 @@ export function StudentProvider({ children }: { children: ReactNode }) {
     const [isDirty, setIsDirty] = useState(false);
     const [activeTab, setActiveTab] = useState<Tab>('personal');
     const [loading, setLoading] = useState(true);
+    const [applyingSchoolId, setApplyingSchoolId] = useState<number | null>(null);
+    const [currentView, setCurrentView] = useState<'selection' | 'submission'>('selection');
     const [studentData, setStudentData] = useState<StudentData>({
         name: '',
         email: '',
@@ -58,6 +64,23 @@ export function StudentProvider({ children }: { children: ReactNode }) {
             if (!matchEmail) return;
             const userEmail = decodeURIComponent(matchEmail[2]);
             const userName = matchName ? decodeURIComponent(matchName[2]) : '';
+            const savedState = localStorage.getItem(`lastState_${userEmail.trim().toLowerCase()}_student`);
+            if (savedState) {
+                try {
+                    const parsed = JSON.parse(savedState);
+                    if (parsed.activeTab) {
+                        setActiveTab(parsed.activeTab);
+                    }
+                    if (parsed.applyingSchoolId) {
+                        setApplyingSchoolId(parsed.applyingSchoolId);
+                    }
+                    if (parsed.currentView) {
+                        setCurrentView(parsed.currentView);
+                    }
+                } catch (e) {
+                    console.error('Failed to restore student tab:', e);
+                }
+            }
 
             const res = await getStudentByEmail(userEmail);
 
@@ -159,8 +182,45 @@ export function StudentProvider({ children }: { children: ReactNode }) {
         setIsDirty(false);
     };
 
+    useEffect(() => {
+        if (studentData.email) {
+            localStorage.setItem(
+                `lastState_${studentData.email.trim().toLowerCase()}_student`,
+                JSON.stringify({
+                    pathname: '/student',
+                    activeTab,
+                    applyingSchoolId,
+                    currentView
+                })
+            );
+        }
+    }, [activeTab, studentData.email, applyingSchoolId, currentView]);
+
+    useEffect(() => {
+        if (isDirty) {
+            const timer = setTimeout(async () => {
+                await saveChanges();
+            }, 2000);
+            return () => clearTimeout(timer);
+        }
+    }, [isDirty, studentData]);
+
     return (
-        <StudentContext.Provider value={{ isDirty, setIsDirty, activeTab, setActiveTab, saveChanges, discardChanges, studentData, setStudentData, loading }}>
+        <StudentContext.Provider value={{
+            isDirty,
+            setIsDirty,
+            activeTab,
+            setActiveTab,
+            saveChanges,
+            discardChanges,
+            studentData,
+            setStudentData,
+            loading,
+            applyingSchoolId,
+            setApplyingSchoolId,
+            currentView,
+            setCurrentView
+        }}>
             {children}
         </StudentContext.Provider>
     );

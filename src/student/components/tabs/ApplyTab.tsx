@@ -16,7 +16,14 @@ import {
 } from '@/lib/studentActions';
 
 export default function ApplyTab() {
-    const { studentData } = useStudentContext();
+    const {
+        studentData,
+        applyingSchoolId,
+        setApplyingSchoolId,
+        currentView,
+        setCurrentView
+    } = useStudentContext();
+
     const [selectedLetterPaths, setSelectedLetterPaths] = useState<string[]>([]);
     const [dropdownLettersOpen, setDropdownLettersOpen] = useState(false);
 
@@ -36,12 +43,9 @@ export default function ApplyTab() {
     const [isSaving, setIsSaving] = useState(false);
     const [saveStatus, setSaveStatus] = useState<null | 'success' | 'error'>(null);
 
-    // View state
-    const [currentView, setCurrentView] = useState<'selection' | 'submission'>('selection');
-    const [applyingSchoolId, setApplyingSchoolId] = useState<number | null>(null);
-
     const [includeGre, setIncludeGre] = useState(false);
     const [includeGmat, setIncludeGmat] = useState(false);
+    const [isDraftDirty, setIsDraftDirty] = useState(false);
 
     const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
@@ -157,6 +161,7 @@ export default function ApplyTab() {
             }
 
             setSaveStatus('success');
+            setIsDraftDirty(false);
             setTimeout(() => setSaveStatus(null), 3000);
         } catch (err) {
             console.error('Error saving application:', err);
@@ -185,6 +190,7 @@ export default function ApplyTab() {
                 if (!ansRes.success) throw new Error(ansRes.error);
             }
             setSaveStatus('success');
+            setIsDraftDirty(false);
             setTimeout(() => setSaveStatus(null), 3000);
         } catch (err) {
             console.error('Error saving answers:', err);
@@ -193,6 +199,16 @@ export default function ApplyTab() {
             setIsSaving(false);
         }
     };
+
+    useEffect(() => {
+        if (!isDraftDirty || !applyingSchoolId) return;
+        const timer = setTimeout(() => {
+            if (studentData?.id) {
+                handleSave();
+            }
+        }, 2000);
+        return () => clearTimeout(timer);
+    }, [isDraftDirty, applyingSchoolId, studentData?.id]);
 
     const selectedLetters = studentData.recommendation_letters?.filter(l => selectedLetterPaths.includes(l.path)) || [];
     const selectedTranscripts = studentData.transcripts?.filter(t => selectedTranscriptPaths.includes(t.path)) || [];
@@ -350,7 +366,7 @@ export default function ApplyTab() {
                                     type="checkbox"
                                     className="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer"
                                     checked={includeGre}
-                                    onChange={(e) => setIncludeGre(e.target.checked)}
+                                    onChange={(e) => { setIncludeGre(e.target.checked); setIsDraftDirty(true); }}
                                 />
                                 <span className="text-sm font-medium text-gray-600">GRE ({studentData.exams?.gre || 'N/A'})</span>
                             </label>
@@ -359,7 +375,7 @@ export default function ApplyTab() {
                                     type="checkbox"
                                     className="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer"
                                     checked={includeGmat}
-                                    onChange={(e) => setIncludeGmat(e.target.checked)}
+                                    onChange={(e) => { setIncludeGmat(e.target.checked); setIsDraftDirty(true); }}
                                 />
                                 <span className="text-sm font-medium text-gray-600">GMAT ({studentData.exams?.gmat || 'N/A'})</span>
                             </label>
@@ -399,6 +415,7 @@ export default function ApplyTab() {
                                                         ? selectedLetterPaths.filter(p => p !== letter.path)
                                                         : [...selectedLetterPaths, letter.path];
                                                     setSelectedLetterPaths(newPaths);
+                                                    setIsDraftDirty(true);
                                                 }}
                                             />
                                             <span className="text-sm font-medium text-gray-700">{letter.name}</span>
@@ -421,6 +438,7 @@ export default function ApplyTab() {
                                         <button onClick={() => {
                                             const newPaths = selectedLetterPaths.filter(p => p !== letter.path);
                                             setSelectedLetterPaths(newPaths);
+                                            setIsDraftDirty(true);
                                         }} className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
                                             <X className="w-4 h-4" />
                                         </button>
@@ -461,6 +479,7 @@ export default function ApplyTab() {
                                                         ? selectedTranscriptPaths.filter(p => p !== transcript.path)
                                                         : [...selectedTranscriptPaths, transcript.path];
                                                     setSelectedTranscriptPaths(newPaths);
+                                                    setIsDraftDirty(true);
                                                 }}
                                             />
                                             <span className="text-sm font-medium text-gray-700">{transcript.name}</span>
@@ -483,6 +502,7 @@ export default function ApplyTab() {
                                         <button onClick={() => {
                                             const newPaths = selectedTranscriptPaths.filter(p => p !== transcript.path);
                                             setSelectedTranscriptPaths(newPaths);
+                                            setIsDraftDirty(true);
                                         }} className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
                                             <X className="w-4 h-4" />
                                         </button>
@@ -515,7 +535,10 @@ export default function ApplyTab() {
                                         <label className="text-sm font-semibold text-gray-700">{q.content}</label>
                                         <textarea
                                             value={questionAnswers[q.id] || ''}
-                                            onChange={(e) => setQuestionAnswers(prev => ({ ...prev, [q.id]: e.target.value }))}
+                                            onChange={(e) => {
+                                                setQuestionAnswers(prev => ({ ...prev, [q.id]: e.target.value }));
+                                                setIsDraftDirty(true);
+                                            }}
                                             placeholder="Please type your answer here..."
                                             className="w-full bg-white border border-gray-200 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all placeholder:text-gray-300 min-h-[100px] shadow-sm hover:border-gray-300"
                                         />

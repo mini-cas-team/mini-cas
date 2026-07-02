@@ -5,17 +5,15 @@ import { useRouter } from 'next/navigation';
 import { Database, HardDrive, LogOut } from 'lucide-react';
 import TableTab from '@/admin/components/tabs/TableTab';
 import StorageTab from '@/admin/components/tabs/StorageTab';
-import { logoutAction } from '@/lib/authActions';
+import { AdminProvider, useAdminContext } from '@/admin/context/AdminContext';
 
-function AdminDashboardContent({ userName }: { userName: string }) {
-    const router = useRouter();
-    const [activeTab, setActiveTab] = useState<'table' | 'storage'>('table');
-
-    const handleLogout = async () => {
-        await logoutAction();
-        router.push('/login?type=admin');
-        router.refresh();
-    };
+function AdminDashboardContent() {
+    const {
+        userName,
+        activeTab,
+        setActiveTab,
+        handleLogout
+    } = useAdminContext();
 
     return (
         <div className="min-h-screen bg-gray-50 flex">
@@ -104,5 +102,9 @@ export default function AdminDashboard() {
         );
     }
 
-    return <AdminDashboardContent userName={userName || 'Admin'} />;
+    return (
+        <AdminProvider userName={userName || 'Admin'}>
+            <AdminDashboardContent />
+        </AdminProvider>
+    );
 }

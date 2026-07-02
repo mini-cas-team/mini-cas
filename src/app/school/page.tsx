@@ -3,85 +3,21 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-    Plus,
-    Trash2,
-    Settings,
     LayoutDashboard,
     HelpCircle,
-    Users,
     ChevronRight,
     LogOut
 } from 'lucide-react';
-import { getSchoolByName, getFirstSchool, addSchoolQuestion, deleteSchoolQuestion } from '@/lib/schoolActions';
-import { getSchoolQuestions } from '@/lib/studentActions';
-import { logoutAction } from '@/lib/authActions';
+import { SchoolProvider, useSchoolContext } from '@/school/context/SchoolContext';
+import QuestionsTab from '@/school/components/tabs/QuestionsTab';
 
-function SchoolDashboardContent({ schoolName }: { schoolName: string }) {
-    const router = useRouter();
-    const [currentSchool, setCurrentSchool] = useState<any>(null);
-    const [activeTab, setActiveTab] = useState('questions');
-    const [questions, setQuestions] = useState<any[]>([]);
-    const [newQuestionContent, setNewQuestionContent] = useState('');
-    const [isLoading, setIsLoading] = useState(true);
-
-    const handleLogout = async () => {
-        await logoutAction();
-        router.push('/login?type=school');
-        router.refresh();
-    };
-
-    useEffect(() => {
-        async function loadProfile() {
-            if (schoolName) {
-                const res = await getSchoolByName(schoolName);
-                if (res.success && res.data) {
-                    setCurrentSchool(res.data);
-                    loadQuestions(res.data.id);
-                    return;
-                }
-            }
-            
-            // fallback to first school if not found
-            const fallbackRes = await getFirstSchool();
-            if (fallbackRes.success && fallbackRes.data) {
-                setCurrentSchool(fallbackRes.data);
-                loadQuestions(fallbackRes.data.id);
-            }
-        }
-        loadProfile();
-    }, [schoolName]);
-
-    async function loadQuestions(schoolId: number) {
-        setIsLoading(true);
-        const res = await getSchoolQuestions(schoolId);
-        if (res.success && res.data) {
-            setQuestions(res.data);
-        }
-        setIsLoading(false);
-    }
-
-    const addQuestion = async () => {
-        if (!newQuestionContent.trim() || !currentSchool) return;
-
-        const res = await addSchoolQuestion(
-            currentSchool.id,
-            newQuestionContent.trim(),
-            questions.length
-        );
-
-        if (res.success && res.data) {
-            setQuestions([...questions, res.data]);
-            setNewQuestionContent('');
-        }
-    };
-
-    const deleteQuestion = async (id: number) => {
-        const res = await deleteSchoolQuestion(id);
-
-        if (res.success) {
-            setQuestions(questions.filter(q => q.id !== id));
-        }
-    };
+function SchoolDashboardContent() {
+    const {
+        currentSchool,
+        activeTab,
+        setActiveTab,
+        handleLogout
+    } = useSchoolContext();
 
     return (
         <div className="flex h-screen w-full bg-[#f8fafc]">
@@ -150,85 +86,10 @@ function SchoolDashboardContent({ schoolName }: { schoolName: string }) {
                         <ChevronRight className="w-4 h-4 text-gray-300" />
                         <span className="text-sm font-bold text-gray-800">{currentSchool?.name || 'School'} Application Questions</span>
                     </div>
-                    <div className="flex items-center gap-4">
-                        <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors" title="Settings">
-                            <Settings className="w-5 h-5" />
-                        </button>
-                    </div>
                 </header>
 
                 <main className="p-8 max-w-5xl mx-auto">
-                    {activeTab === 'questions' && (
-                        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <h1 className="text-2xl font-bold text-gray-900">{currentSchool?.name || 'School'} Application Questions</h1>
-                                    <p className="text-sm text-gray-500 mt-1">Manage custom questions for your school's application portal.</p>
-                                </div>
-                                <button
-                                    onClick={() => document.getElementById('new-question-input')?.focus()}
-                                    className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 shadow-md shadow-indigo-100 transition-all hover:-translate-y-0.5"
-                                >
-                                    <Plus className="w-4 h-4" />
-                                    New Question
-                                </button>
-                            </div>
-
-                            {/* Question List */}
-                            <div className="space-y-4">
-                                <div className="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm">
-                                    <div className="flex gap-4 mb-8">
-                                        <div className="flex-1 relative">
-                                            <input
-                                                id="new-question-input"
-                                                type="text"
-                                                value={newQuestionContent}
-                                                onChange={(e) => setNewQuestionContent(e.target.value)}
-                                                onKeyDown={(e) => e.key === 'Enter' && addQuestion()}
-                                                placeholder="Type your new question here..."
-                                                className="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all pr-24"
-                                            />
-                                            <button
-                                                onClick={addQuestion}
-                                                className="absolute right-2 top-2 bottom-2 bg-indigo-600 text-white px-5 rounded-xl hover:bg-indigo-700 transition-colors text-xs font-bold flex items-center"
-                                            >
-                                                Add
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-3">
-                                        <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest px-2">Existing Questions</h3>
-                                        {isLoading ? (
-                                            <div className="py-12 text-center text-gray-400 animate-pulse">Loading questions...</div>
-                                        ) : questions.length > 0 ? (
-                                            questions.map((q, idx) => (
-                                                <div key={q.id} className="group flex items-center justify-between p-4 bg-gray-50 border border-transparent hover:border-indigo-100 hover:bg-white hover:shadow-md rounded-2xl transition-all">
-                                                    <div className="flex items-center gap-4">
-                                                        <div className="flex flex-col items-center justify-center w-8 h-8 rounded-lg bg-gray-200 text-gray-500 text-[10px] font-bold group-hover:bg-indigo-100 group-hover:text-indigo-600 transition-colors">
-                                                            {idx + 1}
-                                                        </div>
-                                                        <p className="text-sm font-medium text-gray-800">{q.content}</p>
-                                                    </div>
-                                                    <button
-                                                        onClick={() => deleteQuestion(q.id)}
-                                                        className="p-2 text-gray-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
-                                                    >
-                                                        <Trash2 className="w-5 h-5" />
-                                                    </button>
-                                                </div>
-                                            ))
-                                        ) : (
-                                            <div className="py-12 text-center border-2 border-dashed border-gray-100 rounded-2xl">
-                                                <HelpCircle className="w-8 h-8 mx-auto text-gray-200 mb-2" />
-                                                <p className="text-sm text-gray-400">No questions defined yet. Add your first one above!</p>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
+                    {activeTab === 'questions' && <QuestionsTab />}
                 </main>
             </div>
         </div>
@@ -270,5 +131,9 @@ export default function SchoolDashboard() {
         );
     }
 
-    return <SchoolDashboardContent schoolName={schoolName || 'School'} />;
+    return (
+        <SchoolProvider schoolName={schoolName || 'School'}>
+            <SchoolDashboardContent />
+        </SchoolProvider>
+    );
 }

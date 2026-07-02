@@ -84,7 +84,18 @@ function LoginFormContent() {
     try {
       const res = await loginAction(email, password, type);
       if (res.success && res.type) {
-        const destination = (res.type === 'student' || res.type === 'admin' || res.type === 'school') ? `/${res.type}` : '/school';
+        let destination = (res.type === 'student' || res.type === 'admin' || res.type === 'school') ? `/${res.type}` : '/school';
+        try {
+          const savedStateStr = localStorage.getItem(`lastState_${email.trim().toLowerCase()}_${res.type}`);
+          if (savedStateStr) {
+            const savedState = JSON.parse(savedStateStr);
+            if (savedState.pathname) {
+              destination = savedState.pathname;
+            }
+          }
+        } catch (e) {
+          console.error('Failed to parse last user state:', e);
+        }
         router.push(destination);
         router.refresh();
       } else {
