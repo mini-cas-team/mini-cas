@@ -64,7 +64,13 @@ export async function updateStudent(id: string, data: any) {
 
 export async function getApplications(studentId: string) {
   try {
-    const res = await query('SELECT * FROM applications WHERE student_id = $1', [studentId]);
+    const res = await query(
+      `SELECT a.*, s.name AS school_name, s.location AS school_location
+       FROM applications a
+       LEFT JOIN schools s ON a.school_id = s.id
+       WHERE a.student_id = $1`,
+      [studentId]
+    );
     return { success: true, data: res.rows };
   } catch (error: any) {
     console.error('Failed to get applications:', error);
@@ -93,6 +99,20 @@ export async function removeApplication(studentId: string, schoolId: number) {
     return { success: true };
   } catch (error: any) {
     console.error('Failed to remove application:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+export async function submitApplication(studentId: string, schoolId: number) {
+  try {
+    const res = await query(
+      `UPDATE applications SET status = 'submitted', updated_at = NOW()
+       WHERE student_id = $1 AND school_id = $2 RETURNING *`,
+      [studentId, schoolId]
+    );
+    return { success: true, data: res.rows[0] };
+  } catch (error: any) {
+    console.error('Failed to submit application:', error);
     return { success: false, error: error.message };
   }
 }

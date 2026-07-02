@@ -12,7 +12,8 @@ import {
     updateApplicationAction,
     getSchoolQuestions,
     getApplicationAnswers,
-    saveApplicationAnswers
+    saveApplicationAnswers,
+    submitApplication
 } from '@/lib/studentActions';
 
 export default function ApplyTab() {
@@ -21,17 +22,17 @@ export default function ApplyTab() {
         applyingSchoolId,
         setApplyingSchoolId,
         currentView,
-        setCurrentView
+        setCurrentView,
+        setActiveTab
     } = useStudentContext();
 
     const [selectedLetterPaths, setSelectedLetterPaths] = useState<string[]>([]);
-    const [dropdownLettersOpen, setDropdownLettersOpen] = useState(false);
-
     const [selectedTranscriptPaths, setSelectedTranscriptPaths] = useState<string[]>([]);
-    const [dropdownTranscriptsOpen, setDropdownTranscriptsOpen] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const [schools, setSchools] = useState<any[]>([]);
     const [selectedSchoolIds, setSelectedSchoolIds] = useState<number[]>([]);
+    const [submittedSchoolIds, setSubmittedSchoolIds] = useState<number[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -46,6 +47,8 @@ export default function ApplyTab() {
     const [includeGre, setIncludeGre] = useState(false);
     const [includeGmat, setIncludeGmat] = useState(false);
     const [isDraftDirty, setIsDraftDirty] = useState(false);
+    const [isLettersModalOpen, setIsLettersModalOpen] = useState(false);
+    const [isTranscriptsModalOpen, setIsTranscriptsModalOpen] = useState(false);
 
     const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
@@ -66,8 +69,11 @@ export default function ApplyTab() {
                 if (studentData?.id) {
                     const res = await getApplications(studentData.id);
                     if (res.success && res.data) {
-                        setDbApplications(res.data);
-                        setSelectedSchoolIds(res.data.map(a => a.school_id));
+                        const drafts = res.data.filter((a: any) => a.status === 'draft');
+                        const submitted = res.data.filter((a: any) => a.status === 'submitted');
+                        setDbApplications(drafts);
+                        setSelectedSchoolIds(drafts.map(a => a.school_id));
+                        setSubmittedSchoolIds(submitted.map(a => a.school_id));
                     }
                 }
             } catch (err) {
@@ -293,6 +299,7 @@ export default function ApplyTab() {
 
     const availableSchools = schools.filter(s =>
         !selectedSchoolIds.includes(s.id) &&
+        !submittedSchoolIds.includes(s.id) &&
         (s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
             s.location.toLowerCase().includes(searchQuery.toLowerCase()))
     );
@@ -334,6 +341,7 @@ export default function ApplyTab() {
 
     if (currentView === 'submission' && applyingSchool) {
         return (
+            <>
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
                 <div className="flex items-center gap-4 mb-6">
                     <button
@@ -385,47 +393,19 @@ export default function ApplyTab() {
                     <hr className="border-gray-100" />
 
                     {/* Recommendation Letters */}
-                    <div className="relative">
+                    <div className="space-y-2">
                         <button
-                            onClick={() => setDropdownLettersOpen(!dropdownLettersOpen)}
-                            className="flex items-center gap-3 px-5 py-3 bg-white border border-gray-200 rounded-xl font-semibold text-gray-700 hover:bg-gray-50 transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 w-full justify-between"
+                            type="button"
+                            onClick={() => setIsLettersModalOpen(true)}
+                            className="flex items-center gap-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-4 py-2.5 rounded-xl transition-all text-sm font-semibold border border-indigo-100/50 shadow-sm active:scale-98"
                         >
-                            <div className="flex items-center gap-2">
-                                Select Recommendattion Letters
-                                {selectedLetterPaths.length > 0 && (
-                                    <span className="bg-indigo-100 text-indigo-700 py-0.5 px-2.5 rounded-full text-xs ml-1">
-                                        {selectedLetterPaths.length}
-                                    </span>
-                                )}
-                            </div>
-                            <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${dropdownLettersOpen ? 'rotate-180' : ''}`} />
+                            Manage Recommendation Letters
+                            {selectedLetterPaths.length > 0 && (
+                                <span className="bg-indigo-600 text-white py-0.5 px-2 rounded-full text-xs font-bold ml-1">
+                                    {selectedLetterPaths.length}
+                                </span>
+                            )}
                         </button>
-
-                        {dropdownLettersOpen && (
-                            <div className="absolute z-10 w-full md:w-96 mt-2 bg-white border border-gray-100 shadow-xl rounded-xl max-h-60 overflow-auto p-2">
-                                {studentData.recommendation_letters?.length > 0 ? (
-                                    studentData.recommendation_letters.map((letter, idx) => (
-                                        <label key={idx} className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors border border-transparent hover:border-gray-100">
-                                            <input
-                                                type="checkbox"
-                                                className="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer"
-                                                checked={selectedLetterPaths.includes(letter.path)}
-                                                onChange={() => {
-                                                    const newPaths = selectedLetterPaths.includes(letter.path)
-                                                        ? selectedLetterPaths.filter(p => p !== letter.path)
-                                                        : [...selectedLetterPaths, letter.path];
-                                                    setSelectedLetterPaths(newPaths);
-                                                    setIsDraftDirty(true);
-                                                }}
-                                            />
-                                            <span className="text-sm font-medium text-gray-700">{letter.name}</span>
-                                        </label>
-                                    ))
-                                ) : (
-                                    <div className="p-4 text-sm text-gray-500 text-center">No uploaded letters available. Check the Recommend Letter tab!</div>
-                                )}
-                            </div>
-                        )}
 
                         {/* Selection Display */}
                         {selectedLetters.length > 0 && (
@@ -449,47 +429,19 @@ export default function ApplyTab() {
                     </div>
 
                     {/* Official Transcripts */}
-                    <div className="relative">
+                    <div className="space-y-2">
                         <button
-                            onClick={() => setDropdownTranscriptsOpen(!dropdownTranscriptsOpen)}
-                            className="flex items-center gap-3 px-5 py-3 bg-white border border-gray-200 rounded-xl font-semibold text-gray-700 hover:bg-gray-50 transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 w-full justify-between"
+                            type="button"
+                            onClick={() => setIsTranscriptsModalOpen(true)}
+                            className="flex items-center gap-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-4 py-2.5 rounded-xl transition-all text-sm font-semibold border border-indigo-100/50 shadow-sm active:scale-98"
                         >
-                            <div className="flex items-center gap-2">
-                                Select Academic Transcripts
-                                {selectedTranscriptPaths.length > 0 && (
-                                    <span className="bg-indigo-100 text-indigo-700 py-0.5 px-2.5 rounded-full text-xs ml-1">
-                                        {selectedTranscriptPaths.length}
-                                    </span>
-                                )}
-                            </div>
-                            <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${dropdownTranscriptsOpen ? 'rotate-180' : ''}`} />
+                            Manage Transcripts
+                            {selectedTranscriptPaths.length > 0 && (
+                                <span className="bg-indigo-600 text-white py-0.5 px-2 rounded-full text-xs font-bold ml-1">
+                                    {selectedTranscriptPaths.length}
+                                </span>
+                            )}
                         </button>
-
-                        {dropdownTranscriptsOpen && (
-                            <div className="absolute z-10 w-full md:w-96 mt-2 bg-white border border-gray-100 shadow-xl rounded-xl max-h-60 overflow-auto p-2">
-                                {studentData.transcripts?.length > 0 ? (
-                                    studentData.transcripts.map((transcript, idx) => (
-                                        <label key={idx} className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors border border-transparent hover:border-gray-100">
-                                            <input
-                                                type="checkbox"
-                                                className="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer"
-                                                checked={selectedTranscriptPaths.includes(transcript.path)}
-                                                onChange={() => {
-                                                    const newPaths = selectedTranscriptPaths.includes(transcript.path)
-                                                        ? selectedTranscriptPaths.filter(p => p !== transcript.path)
-                                                        : [...selectedTranscriptPaths, transcript.path];
-                                                    setSelectedTranscriptPaths(newPaths);
-                                                    setIsDraftDirty(true);
-                                                }}
-                                            />
-                                            <span className="text-sm font-medium text-gray-700">{transcript.name}</span>
-                                        </label>
-                                    ))
-                                ) : (
-                                    <div className="p-4 text-sm text-gray-500 text-center">No uploaded transcripts available. Check the Transcripts tab!</div>
-                                )}
-                            </div>
-                        )}
 
                         {/* Selection Display */}
                         {selectedTranscripts.length > 0 && (
@@ -549,17 +501,6 @@ export default function ApplyTab() {
                     )}
 
                     <div className="pt-6 border-t border-gray-100 flex gap-4 justify-end items-center">
-                        {saveStatus === 'success' && <span className="text-green-500 text-sm font-medium animate-pulse">Changes Saved!</span>}
-                        {saveStatus === 'error' && <span className="text-red-500 text-sm font-medium">Save Failed</span>}
-
-                        <button
-                            onClick={handleSave}
-                            disabled={isSaving}
-                            className="px-6 py-3 font-medium text-white bg-green-600 rounded-xl hover:bg-green-700 shadow-md transition-all disabled:opacity-50"
-                        >
-                            {isSaving ? 'Saving...' : 'Save Draft'}
-                        </button>
-
                         <button
                             onClick={handlePreview}
                             disabled={isGeneratingPdf}
@@ -567,12 +508,129 @@ export default function ApplyTab() {
                         >
                             {isGeneratingPdf ? 'Generating PDF...' : 'Preview'}
                         </button>
-                        <button className="px-6 py-3 font-medium text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5">
-                            Submit Application
+                        <button
+                            onClick={async () => {
+                                if (!studentData.id || !applyingSchoolId) return;
+                                setIsSubmitting(true);
+                                const res = await submitApplication(studentData.id, applyingSchoolId);
+                                if (res.success) {
+                                    // Remove from draft list in local state
+                                    setDbApplications(prev => prev.filter((a: any) => a.school_id !== applyingSchoolId));
+                                    setSelectedSchoolIds(prev => prev.filter(id => id !== applyingSchoolId));
+                                    setSubmittedSchoolIds(prev => [...prev, applyingSchoolId]);
+                                    setCurrentView('selection');
+                                    setApplyingSchoolId(null);
+                                    setActiveTab('applied' as any);
+                                } else {
+                                    alert('Failed to submit application. Please try again.');
+                                }
+                                setIsSubmitting(false);
+                            }}
+                            disabled={isSubmitting}
+                            className="px-6 py-3 font-medium text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5 disabled:opacity-50"
+                        >
+                            {isSubmitting ? 'Submitting...' : 'Submit Application'}
                         </button>
                     </div>
                 </div>
             </div>
+
+            {/* Letters Selection Modal */}
+            {isLettersModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-white sticky top-0">
+                            <div>
+                                <h3 className="text-lg font-bold text-gray-900">Select Recommendation Letters</h3>
+                                <p className="text-xs text-gray-500 mt-1">Select the letters you wish to attach to this application.</p>
+                            </div>
+                            <button onClick={() => setIsLettersModalOpen(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                                <X className="w-5 h-5 text-gray-500" />
+                            </button>
+                        </div>
+                        <div className="p-6 max-h-96 overflow-y-auto space-y-2">
+                            {studentData.recommendation_letters?.length > 0 ? (
+                                studentData.recommendation_letters.map((letter, idx) => (
+                                    <label key={idx} className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors border border-transparent hover:border-gray-100">
+                                        <input
+                                            type="checkbox"
+                                            className="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer"
+                                            checked={selectedLetterPaths.includes(letter.path)}
+                                            onChange={() => {
+                                                const newPaths = selectedLetterPaths.includes(letter.path)
+                                                    ? selectedLetterPaths.filter(p => p !== letter.path)
+                                                    : [...selectedLetterPaths, letter.path];
+                                                setSelectedLetterPaths(newPaths);
+                                                setIsDraftDirty(true);
+                                            }}
+                                        />
+                                        <span className="text-sm font-medium text-gray-700">{letter.name}</span>
+                                    </label>
+                                ))
+                            ) : (
+                                <div className="p-4 text-sm text-gray-500 text-center">No uploaded letters available. Check the Recommend Letter tab!</div>
+                            )}
+                        </div>
+                        <div className="p-6 bg-gray-50 border-t border-gray-100 flex justify-end">
+                            <button
+                                onClick={() => setIsLettersModalOpen(false)}
+                                className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 transition-all shadow-sm"
+                            >
+                                Done
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Transcripts Selection Modal */}
+            {isTranscriptsModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-white sticky top-0">
+                            <div>
+                                <h3 className="text-lg font-bold text-gray-900">Select Academic Transcripts</h3>
+                                <p className="text-xs text-gray-500 mt-1">Select the official transcripts you wish to attach.</p>
+                            </div>
+                            <button onClick={() => setIsTranscriptsModalOpen(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                                <X className="w-5 h-5 text-gray-500" />
+                            </button>
+                        </div>
+                        <div className="p-6 max-h-96 overflow-y-auto space-y-2">
+                            {studentData.transcripts?.length > 0 ? (
+                                studentData.transcripts.map((transcript, idx) => (
+                                    <label key={idx} className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors border border-transparent hover:border-gray-100">
+                                        <input
+                                            type="checkbox"
+                                            className="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer"
+                                            checked={selectedTranscriptPaths.includes(transcript.path)}
+                                            onChange={() => {
+                                                const newPaths = selectedTranscriptPaths.includes(transcript.path)
+                                                    ? selectedTranscriptPaths.filter(p => p !== transcript.path)
+                                                    : [...selectedTranscriptPaths, transcript.path];
+                                                setSelectedTranscriptPaths(newPaths);
+                                                setIsDraftDirty(true);
+                                            }}
+                                        />
+                                        <span className="text-sm font-medium text-gray-700">{transcript.name}</span>
+                                    </label>
+                                ))
+                            ) : (
+                                <div className="p-4 text-sm text-gray-500 text-center">No uploaded transcripts available. Check the Transcripts tab!</div>
+                            )}
+                        </div>
+                        <div className="p-6 bg-gray-50 border-t border-gray-100 flex justify-end">
+                            <button
+                                onClick={() => setIsTranscriptsModalOpen(false)}
+                                className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 transition-all shadow-sm"
+                            >
+                                Done
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            </>
         );
     }
 
@@ -746,6 +804,106 @@ export default function ApplyTab() {
                                     className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 transition-all disabled:opacity-50"
                                 >
                                     {isCreatingSchool ? 'Creating...' : 'Complete'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Letters Selection Modal */}
+                {isLettersModalOpen && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
+                        <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                            <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-white sticky top-0">
+                                <div>
+                                    <h3 className="text-lg font-bold text-gray-900">Select Recommendation Letters</h3>
+                                    <p className="text-xs text-gray-500 mt-1">Select the letters you wish to attach to this application.</p>
+                                </div>
+                                <button onClick={() => setIsLettersModalOpen(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                                    <X className="w-5 h-5 text-gray-500" />
+                                </button>
+                            </div>
+
+                            <div className="p-6 max-h-96 overflow-y-auto space-y-2">
+                                {studentData.recommendation_letters?.length > 0 ? (
+                                    studentData.recommendation_letters.map((letter, idx) => (
+                                        <label key={idx} className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors border border-transparent hover:border-gray-100">
+                                            <input
+                                                type="checkbox"
+                                                className="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer"
+                                                checked={selectedLetterPaths.includes(letter.path)}
+                                                onChange={() => {
+                                                    const newPaths = selectedLetterPaths.includes(letter.path)
+                                                        ? selectedLetterPaths.filter(p => p !== letter.path)
+                                                        : [...selectedLetterPaths, letter.path];
+                                                    setSelectedLetterPaths(newPaths);
+                                                    setIsDraftDirty(true);
+                                                }}
+                                            />
+                                            <span className="text-sm font-medium text-gray-700">{letter.name}</span>
+                                        </label>
+                                    ))
+                                ) : (
+                                    <div className="p-4 text-sm text-gray-500 text-center">No uploaded letters available. Check the Recommend Letter tab!</div>
+                                )}
+                            </div>
+
+                            <div className="p-6 bg-gray-50 border-t border-gray-100 flex justify-end">
+                                <button
+                                    onClick={() => setIsLettersModalOpen(false)}
+                                    className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 transition-all shadow-sm"
+                                >
+                                    Done
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Transcripts Selection Modal */}
+                {isTranscriptsModalOpen && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
+                        <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                            <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-white sticky top-0">
+                                <div>
+                                    <h3 className="text-lg font-bold text-gray-900">Select Academic Transcripts</h3>
+                                    <p className="text-xs text-gray-500 mt-1">Select the official transcripts you wish to attach.</p>
+                                </div>
+                                <button onClick={() => setIsTranscriptsModalOpen(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                                    <X className="w-5 h-5 text-gray-500" />
+                                </button>
+                            </div>
+
+                            <div className="p-6 max-h-96 overflow-y-auto space-y-2">
+                                {studentData.transcripts?.length > 0 ? (
+                                    studentData.transcripts.map((transcript, idx) => (
+                                        <label key={idx} className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors border border-transparent hover:border-gray-100">
+                                            <input
+                                                type="checkbox"
+                                                className="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer"
+                                                checked={selectedTranscriptPaths.includes(transcript.path)}
+                                                onChange={() => {
+                                                    const newPaths = selectedTranscriptPaths.includes(transcript.path)
+                                                        ? selectedTranscriptPaths.filter(p => p !== transcript.path)
+                                                        : [...selectedTranscriptPaths, transcript.path];
+                                                    setSelectedTranscriptPaths(newPaths);
+                                                    setIsDraftDirty(true);
+                                                }}
+                                            />
+                                            <span className="text-sm font-medium text-gray-700">{transcript.name}</span>
+                                        </label>
+                                    ))
+                                ) : (
+                                    <div className="p-4 text-sm text-gray-500 text-center">No uploaded transcripts available. Check the Transcripts tab!</div>
+                                )}
+                            </div>
+
+                            <div className="p-6 bg-gray-50 border-t border-gray-100 flex justify-end">
+                                <button
+                                    onClick={() => setIsTranscriptsModalOpen(false)}
+                                    className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 transition-all shadow-sm"
+                                >
+                                    Done
                                 </button>
                             </div>
                         </div>

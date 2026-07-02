@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { getStudentByEmail, createStudent, updateStudent } from '@/lib/studentActions';
 
-type Tab = 'personal' | 'exam' | 'transcripts' | 'recommend' | 'apply';
+type Tab = 'personal' | 'exam' | 'transcripts' | 'recommend' | 'apply' | 'applied';
 
 interface StudentData {
     id?: string;

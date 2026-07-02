@@ -45,7 +45,7 @@ export default function SessionTimeoutManager() {
         await logoutAction();
         router.push(`/login?type=${encodeURIComponent(userType)}&timeout=true&email=${encodeURIComponent(userEmail)}`);
         router.refresh();
-      }, 30000); // 30 seconds timeout
+      }, 600000); // 10 minutes timeout
     };
 
     // Initialize timer

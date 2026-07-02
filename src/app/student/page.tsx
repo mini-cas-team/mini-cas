@@ -10,6 +10,7 @@ import ExamScoreTab from '@/student/components/tabs/ExamScoreTab';
 import RecommendLetterTab from '@/student/components/tabs/RecommendLetterTab';
 import TranscriptsTab from '@/student/components/tabs/TranscriptsTab';
 import ApplyTab from '@/student/components/tabs/ApplyTab';
+import AppliedTab from '@/student/components/tabs/AppliedTab';
 
 function StudentDashboard({ userName }: { userName: string }) {
     const router = useRouter();
@@ -111,6 +112,14 @@ function StudentDashboard({ userName }: { userName: string }) {
                             <Send className="w-4 h-4" />
                             Apply
                         </button>
+                        <button
+                            onClick={() => handleTabChange('applied')}
+                            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${activeTab === 'applied' ? 'bg-green-50 text-green-700 ring-1 ring-green-100' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                                }`}
+                        >
+                            <Check className="w-4 h-4" />
+                            Applied
+                        </button>
                     </div>
                 </nav>
 
@@ -133,6 +142,7 @@ function StudentDashboard({ userName }: { userName: string }) {
                     {activeTab === 'transcripts' && <TranscriptsTab />}
                     {activeTab === 'recommend' && <RecommendLetterTab />}
                     {activeTab === 'apply' && <ApplyTab />}
+                    {activeTab === 'applied' && <AppliedTab />}
                 </div>
             </main>
 
