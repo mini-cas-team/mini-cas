@@ -4,7 +4,7 @@ import { query } from '@/lib/db';
 import { s3 } from '@/lib/s3';
 import { HeadBucketCommand, CreateBucketCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
 
-const VALID_TABLES = ['students', 'schools', 'applications', 'school_questions', 'application_answers'];
+const VALID_TABLES = ['students', 'schools', 'applications', 'school_questions', 'application_answers', 'providers', 'provider_letter'];
 
 export async function provisionTable(tableName: string) {
     if (!VALID_TABLES.includes(tableName)) {
@@ -95,6 +95,26 @@ export async function provisionTable(tableName: string) {
                     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
                     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
                     UNIQUE(application_id, question_id)
+                );
+            `);
+        } else if (tableName === 'providers') {
+            await query(`
+                CREATE TABLE IF NOT EXISTS providers (
+                    id SERIAL PRIMARY KEY,
+                    provider TEXT NOT NULL,
+                    provider_email TEXT,
+                    student_id UUID REFERENCES students(id) ON DELETE CASCADE
+                );
+            `);
+        } else if (tableName === 'provider_letter') {
+            await query(`
+                CREATE TABLE IF NOT EXISTS provider_letter (
+                    provider_id INT REFERENCES providers(id) ON DELETE CASCADE,
+                    student_id UUID REFERENCES students(id) ON DELETE CASCADE,
+                    school TEXT DEFAULT '' NOT NULL,
+                    letters TEXT UNIQUE NOT NULL,
+                    acc_view BOOLEAN DEFAULT false NOT NULL,
+                    UNIQUE (provider_id, student_id, school)
                 );
             `);
         }

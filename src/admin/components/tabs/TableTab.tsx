@@ -13,7 +13,8 @@ export default function TableTab() {
                 <ProvisionBlock title="Academic Institutions" targetName="schools" type="table" />
                 <ProvisionBlock title="Academic Applications" targetName="applications" type="table" />
                 <ProvisionBlock title="Institutional Questions" targetName="school_questions" type="table" />
-                <ProvisionBlock title="Application Answers" targetName="application_answers" type="table" />
+                <ProvisionBlock title="Recommendation Letter Providers" targetName="providers" type="table" />
+                <ProvisionBlock title="Provider Recommendation Letters" targetName="provider_letter" type="table" />
             </div>
         </div>
     );

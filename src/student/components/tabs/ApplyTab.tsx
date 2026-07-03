@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useStudentContext } from '@/student/context/StudentContext';
-import { FileText, ChevronDown, Trash2, Building2, X, Search } from 'lucide-react';
+import { FileText, ChevronDown, Trash2, Building2, X, Search, Eye, EyeOff } from 'lucide-react';
 import { getSchools, createNewSchool } from '@/lib/schoolActions';
 import { generateApplicationPdf } from '@/lib/pdfGenerator';
 import {
@@ -13,7 +13,8 @@ import {
     getSchoolQuestions,
     getApplicationAnswers,
     saveApplicationAnswers,
-    submitApplication
+    submitApplication,
+    getLettersForStudentAndSchool
 } from '@/lib/studentActions';
 
 export default function ApplyTab() {
@@ -47,7 +48,6 @@ export default function ApplyTab() {
     const [includeGre, setIncludeGre] = useState(false);
     const [includeGmat, setIncludeGmat] = useState(false);
     const [isDraftDirty, setIsDraftDirty] = useState(false);
-    const [isLettersModalOpen, setIsLettersModalOpen] = useState(false);
     const [isTranscriptsModalOpen, setIsTranscriptsModalOpen] = useState(false);
 
     const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
@@ -216,11 +216,28 @@ export default function ApplyTab() {
         return () => clearTimeout(timer);
     }, [isDraftDirty, applyingSchoolId, studentData?.id]);
 
-    const selectedLetters = studentData.recommendation_letters?.filter(l => selectedLetterPaths.includes(l.path)) || [];
-    const selectedTranscripts = studentData.transcripts?.filter(t => selectedTranscriptPaths.includes(t.path)) || [];
     const activeSchools = schools.filter(s => selectedSchoolIds.includes(s.id));
     const applyingSchool = schools.find(s => s.id === applyingSchoolId);
     const currentApp = dbApplications.find(a => a.school_id === applyingSchoolId);
+
+    const [lettersForActiveSchool, setLettersForActiveSchool] = useState<any[]>([]);
+
+    useEffect(() => {
+        async function fetchLetters() {
+            if (studentData.id && applyingSchool) {
+                const res = await getLettersForStudentAndSchool(studentData.id, applyingSchool.name);
+                if (res.success && res.data) {
+                    setLettersForActiveSchool(res.data);
+                    const paths = res.data.map((l: any) => l.letters);
+                    setSelectedLetterPaths(paths);
+                }
+            }
+        }
+        fetchLetters();
+    }, [studentData.id, applyingSchool]);
+
+    const selectedLetters = lettersForActiveSchool.filter(l => l.uploaded).map(l => ({ name: l.provider_name, path: l.letters }));
+    const selectedTranscripts = studentData.transcripts?.filter(t => selectedTranscriptPaths.includes(t.path)) || [];
 
     // Sync local state when app context changes
     useEffect(() => {
@@ -392,38 +409,68 @@ export default function ApplyTab() {
 
                     <hr className="border-gray-100" />
 
-                    {/* Recommendation Letters */}
-                    <div className="space-y-2">
-                        <button
-                            type="button"
-                            onClick={() => setIsLettersModalOpen(true)}
-                            className="flex items-center gap-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-4 py-2.5 rounded-xl transition-all text-sm font-semibold border border-indigo-100/50 shadow-sm active:scale-98"
-                        >
-                            Manage Recommendation Letters
-                            {selectedLetterPaths.length > 0 && (
-                                <span className="bg-indigo-600 text-white py-0.5 px-2 rounded-full text-xs font-bold ml-1">
-                                    {selectedLetterPaths.length}
-                                </span>
-                            )}
-                        </button>
+                    {/* Recommendation Letters List */}
+                    <div className="space-y-3">
+                        <span className="font-semibold text-gray-700 block">Recommendation Letters</span>
+                        {lettersForActiveSchool.length === 0 ? (
+                            <div className="p-4 text-sm text-gray-500 bg-gray-50 border border-dashed border-gray-200 rounded-xl text-center">
+                                No recommendation letters requested for this school target.
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 gap-3">
+                                {lettersForActiveSchool.map((letter) => {
+                                    const isReady = letter.uploaded;
+                                    const canView = letter.acc_view;
+                                    
+                                    // Hook message
+                                    const tooltipMsg = canView 
+                                        ? "view letter" 
+                                        : "you cannot view letter content";
 
-                        {/* Selection Display */}
-                        {selectedLetters.length > 0 && (
-                            <div className="mt-3 px-2 space-y-1">
-                                {selectedLetters.map((letter, index) => (
-                                    <div key={index} className="flex items-center justify-between text-sm text-gray-700 hover:text-gray-900 group">
-                                        <span className="flex items-center gap-2">
-                                            • <a href={`/api/documents?key=${encodeURIComponent(letter.path)}`} target="_blank" rel="noopener noreferrer" className="hover:underline flex items-center gap-1"><FileText className="w-3.5 h-3.5 text-blue-500" /> {letter.name}</a>
-                                        </span>
-                                        <button onClick={() => {
-                                            const newPaths = selectedLetterPaths.filter(p => p !== letter.path);
-                                            setSelectedLetterPaths(newPaths);
-                                            setIsDraftDirty(true);
-                                        }} className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <X className="w-4 h-4" />
-                                        </button>
-                                    </div>
-                                ))}
+                                    // Element styling based on ready status
+                                    const cardClass = isReady
+                                        ? "border-emerald-200 bg-emerald-50/30 text-emerald-800 hover:bg-emerald-50/50 cursor-pointer"
+                                        : "border-red-200 bg-red-50/30 text-red-800 opacity-60 cursor-not-allowed";
+
+                                    const handleRowClick = () => {
+                                        if (!isReady) return;
+                                        if (!canView) {
+                                            alert("you cannot view letter content");
+                                            return;
+                                        }
+                                        window.open(`/api/documents?key=${encodeURIComponent(letter.letters)}`, '_blank');
+                                    };
+
+                                    return (
+                                        <div
+                                            key={letter.letters}
+                                            onClick={handleRowClick}
+                                            title={isReady ? tooltipMsg : undefined}
+                                            className={`flex items-center justify-between p-4 border rounded-2xl transition-all ${cardClass}`}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <div className={`p-2 rounded-xl ${isReady ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-600'}`}>
+                                                    <FileText className="w-5 h-5" />
+                                                </div>
+                                                <div>
+                                                    <p className="font-bold text-sm text-gray-800">{letter.provider_name}</p>
+                                                    <p className="text-xs text-gray-500 mt-0.5">
+                                                        Status: {isReady ? "Ready (Uploaded)" : "Pending Upload"}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            
+                                            <div className="flex items-center gap-2">
+                                                {/* View Icon based on canView */}
+                                                {canView ? (
+                                                    <Eye className={`w-5 h-5 ${isReady ? "text-emerald-600" : "text-gray-400"}`} />
+                                                ) : (
+                                                    <EyeOff className={`w-5 h-5 ${isReady ? "text-red-500" : "text-gray-400"}`} />
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         )}
                     </div>
@@ -526,7 +573,7 @@ export default function ApplyTab() {
                                 }
                                 setIsSubmitting(false);
                             }}
-                            disabled={isSubmitting}
+                            disabled={isSubmitting || lettersForActiveSchool.some(l => !l.uploaded)}
                             className="px-6 py-3 font-medium text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5 disabled:opacity-50"
                         >
                             {isSubmitting ? 'Submitting...' : 'Submit Application'}
@@ -536,52 +583,7 @@ export default function ApplyTab() {
             </div>
 
             {/* Letters Selection Modal */}
-            {isLettersModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-                        <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-white sticky top-0">
-                            <div>
-                                <h3 className="text-lg font-bold text-gray-900">Select Recommendation Letters</h3>
-                                <p className="text-xs text-gray-500 mt-1">Select the letters you wish to attach to this application.</p>
-                            </div>
-                            <button onClick={() => setIsLettersModalOpen(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-                                <X className="w-5 h-5 text-gray-500" />
-                            </button>
-                        </div>
-                        <div className="p-6 max-h-96 overflow-y-auto space-y-2">
-                            {studentData.recommendation_letters?.length > 0 ? (
-                                studentData.recommendation_letters.map((letter, idx) => (
-                                    <label key={idx} className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors border border-transparent hover:border-gray-100">
-                                        <input
-                                            type="checkbox"
-                                            className="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer"
-                                            checked={selectedLetterPaths.includes(letter.path)}
-                                            onChange={() => {
-                                                const newPaths = selectedLetterPaths.includes(letter.path)
-                                                    ? selectedLetterPaths.filter(p => p !== letter.path)
-                                                    : [...selectedLetterPaths, letter.path];
-                                                setSelectedLetterPaths(newPaths);
-                                                setIsDraftDirty(true);
-                                            }}
-                                        />
-                                        <span className="text-sm font-medium text-gray-700">{letter.name}</span>
-                                    </label>
-                                ))
-                            ) : (
-                                <div className="p-4 text-sm text-gray-500 text-center">No uploaded letters available. Check the Recommend Letter tab!</div>
-                            )}
-                        </div>
-                        <div className="p-6 bg-gray-50 border-t border-gray-100 flex justify-end">
-                            <button
-                                onClick={() => setIsLettersModalOpen(false)}
-                                className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 transition-all shadow-sm"
-                            >
-                                Done
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+
 
             {/* Transcripts Selection Modal */}
             {isTranscriptsModalOpen && (
@@ -810,55 +812,6 @@ export default function ApplyTab() {
                     </div>
                 )}
 
-                {/* Letters Selection Modal */}
-                {isLettersModalOpen && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
-                        <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-                            <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-white sticky top-0">
-                                <div>
-                                    <h3 className="text-lg font-bold text-gray-900">Select Recommendation Letters</h3>
-                                    <p className="text-xs text-gray-500 mt-1">Select the letters you wish to attach to this application.</p>
-                                </div>
-                                <button onClick={() => setIsLettersModalOpen(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-                                    <X className="w-5 h-5 text-gray-500" />
-                                </button>
-                            </div>
-
-                            <div className="p-6 max-h-96 overflow-y-auto space-y-2">
-                                {studentData.recommendation_letters?.length > 0 ? (
-                                    studentData.recommendation_letters.map((letter, idx) => (
-                                        <label key={idx} className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors border border-transparent hover:border-gray-100">
-                                            <input
-                                                type="checkbox"
-                                                className="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer"
-                                                checked={selectedLetterPaths.includes(letter.path)}
-                                                onChange={() => {
-                                                    const newPaths = selectedLetterPaths.includes(letter.path)
-                                                        ? selectedLetterPaths.filter(p => p !== letter.path)
-                                                        : [...selectedLetterPaths, letter.path];
-                                                    setSelectedLetterPaths(newPaths);
-                                                    setIsDraftDirty(true);
-                                                }}
-                                            />
-                                            <span className="text-sm font-medium text-gray-700">{letter.name}</span>
-                                        </label>
-                                    ))
-                                ) : (
-                                    <div className="p-4 text-sm text-gray-500 text-center">No uploaded letters available. Check the Recommend Letter tab!</div>
-                                )}
-                            </div>
-
-                            <div className="p-6 bg-gray-50 border-t border-gray-100 flex justify-end">
-                                <button
-                                    onClick={() => setIsLettersModalOpen(false)}
-                                    className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 transition-all shadow-sm"
-                                >
-                                    Done
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                )}
 
                 {/* Transcripts Selection Modal */}
                 {isTranscriptsModalOpen && (

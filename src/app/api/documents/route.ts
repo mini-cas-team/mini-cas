@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDownloadPresignedUrl } from '@/lib/s3';
+import { getDownloadPresignedUrl, s3 } from '@/lib/s3';
+import { PutObjectCommand } from '@aws-sdk/client-s3';
 
 export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
@@ -23,5 +24,33 @@ export async function GET(req: NextRequest) {
             `Error loading document: ${e.message}. (AccessKey: ${keyStatus}, SecretKey: ${secretStatus})`, 
             { status: 500 }
         );
+    }
+}
+
+export async function POST(req: NextRequest) {
+    try {
+        const formData = await req.formData();
+        const key = formData.get('key') as string;
+        const file = formData.get('file') as File;
+        
+        if (!key || !file) {
+            return NextResponse.json({ success: false, error: 'Missing key or file parameters' }, { status: 400 });
+        }
+        
+        const buffer = Buffer.from(await file.arrayBuffer());
+        const BUCKET_NAME = process.env.S3_BUCKET_NAME || 'mini-cas-docs-5d904b5f';
+        
+        const command = new PutObjectCommand({
+            Bucket: BUCKET_NAME,
+            Key: key,
+            Body: buffer,
+            ContentType: file.type
+        });
+        
+        await s3.send(command);
+        return NextResponse.json({ success: true });
+    } catch (error: any) {
+        console.error('Server-side S3 upload failed:', error);
+        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
 }

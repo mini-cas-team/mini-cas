@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 const s3Config: any = {
@@ -15,6 +15,26 @@ if (process.env.MINI_CAS_AWS_ACCESS_KEY_ID && process.env.MINI_CAS_AWS_SECRET_AC
 export const s3 = new S3Client(s3Config);
 
 const BUCKET_NAME = process.env.S3_BUCKET_NAME || 'mini-cas-docs-5d904b5f';
+
+/**
+ * Checks if a file exists in the S3 bucket.
+ */
+export async function checkFileExists(key: string): Promise<boolean> {
+  try {
+    const command = new HeadObjectCommand({
+      Bucket: BUCKET_NAME,
+      Key: key,
+    });
+    await s3.send(command);
+    return true;
+  } catch (error: any) {
+    if (error.name === 'NotFound' || error.$metadata?.httpStatusCode === 404) {
+      return false;
+    }
+    console.error('Error checking S3 file existence:', error);
+    return false;
+  }
+}
 
 /**
  * Generates a presigned URL for PUT uploads directly from the browser to S3.
