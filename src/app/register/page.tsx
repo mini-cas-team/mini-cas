@@ -196,7 +196,7 @@ function RegisterFormContent() {
       )}
 
       <form onSubmit={handleRegisterSubmit} className="space-y-6">
-        {/* 1. Email Address (Pre-filled and read-only) */}
+        {/* 1. Email Address (Fully editable) */}
         <div>
           <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-2">
             Email Address
@@ -207,9 +207,10 @@ function RegisterFormContent() {
               id="email"
               type="email"
               required
-              readOnly
               value={email}
-              className="w-full pl-12 py-3 rounded-xl border border-gray-200 bg-gray-50/50 text-gray-500 cursor-not-allowed outline-none"
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full pl-12 py-3 rounded-xl border border-gray-200 bg-white/50 backdrop-blur-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+              placeholder="e.g. jane.doe@example.com"
             />
           </div>
         </div>
@@ -235,24 +236,13 @@ function RegisterFormContent() {
           </div>
         )}
 
-        {/* 3. Account Type */}
-        <div>
-          <label htmlFor="type" className="block text-sm font-semibold text-gray-700 mb-2">
-            {type === 'school' ? 'Institute Name' : 'Account Type'}
-          </label>
-          <div className="relative">
-            {isPrefilledType ? (
-              <>
-                <Shield className="absolute left-4 top-3.5 w-5 h-5 text-gray-400" />
-                <input
-                  id="type"
-                  type="text"
-                  readOnly
-                  value={type === 'student' ? 'Student' : 'Administrator'}
-                  className="w-full pl-12 py-3 rounded-xl border border-gray-200 bg-gray-50/50 text-gray-500 cursor-not-allowed outline-none capitalize font-medium"
-                />
-              </>
-            ) : (
+        {/* 3. Account Type / Institute Name (Only show select list for school type, hide read-only Account Type for others) */}
+        {type === 'school' && (
+          <div>
+            <label htmlFor="type" className="block text-sm font-semibold text-gray-700 mb-2">
+              Institute Name
+            </label>
+            <div className="relative">
               <select
                 id="type"
                 value={selectedSchool}
@@ -269,9 +259,9 @@ function RegisterFormContent() {
                   + Add New One
                 </option>
               </select>
-            )}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* 4. Password */}
         <div>
