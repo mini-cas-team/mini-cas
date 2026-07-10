@@ -94,3 +94,29 @@ export async function checkSchoolDuplicate(name: string) {
     return { success: false, error: e.message };
   }
 }
+
+export async function getSchoolApplications(schoolId: number) {
+  try {
+    const res = await query(
+      `SELECT 
+        a.id,
+        a.status,
+        a.include_gre,
+        a.include_gmat,
+        a.created_at,
+        s.name AS student_name,
+        s.email AS student_email,
+        s.college_university AS student_undergrad
+       FROM applications a
+       JOIN students s ON a.student_id = s.id
+       WHERE a.school_id = $1
+       ORDER BY a.created_at DESC`,
+      [schoolId]
+    );
+    return { success: true, data: res.rows || [] };
+  } catch (e: any) {
+    console.error("Failed to load school applications:", e);
+    return { success: false, error: e.message };
+  }
+}
+

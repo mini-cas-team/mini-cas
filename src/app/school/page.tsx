@@ -6,10 +6,12 @@ import {
     LayoutDashboard,
     HelpCircle,
     ChevronRight,
-    LogOut
+    LogOut,
+    FileText
 } from 'lucide-react';
 import { SchoolProvider, useSchoolContext } from '@/school/context/SchoolContext';
 import QuestionsTab from '@/school/components/tabs/QuestionsTab';
+import ApplicationsTab from '@/school/components/tabs/ApplicationsTab';
 
 function SchoolDashboardContent() {
     const {
@@ -52,8 +54,18 @@ function SchoolDashboardContent() {
                     {/* View Group */}
                     <div>
                         <h3 className="px-2 text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-4">View</h3>
-                        <div className="p-3 text-xs text-center text-gray-400 border border-dashed border-gray-200 rounded-xl">
-                            No items yet
+                        <div className="space-y-1">
+                            <button
+                                onClick={() => setActiveTab('applications')}
+                                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group ${activeTab === 'applications'
+                                    ? 'bg-indigo-50 text-indigo-700 font-semibold'
+                                    : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
+                                    }`}
+                            >
+                                <FileText className={`w-5 h-5 ${activeTab === 'applications' ? 'text-indigo-600' : 'text-gray-400 group-hover:text-gray-600'}`} />
+                                <span className="text-sm">Applications</span>
+                                {activeTab === 'applications' && <ChevronRight className="w-4 h-4 ml-auto" />}
+                            </button>
                         </div>
                     </div>
                 </nav>
@@ -82,14 +94,19 @@ function SchoolDashboardContent() {
             <div className="flex-1 overflow-auto">
                 <header className="h-16 bg-white border-b border-gray-200 px-8 flex items-center justify-between sticky top-0 z-10">
                     <div className="flex items-center gap-2">
-                        <span className="text-sm text-gray-400">Admin</span>
+                        <span className="text-sm text-gray-400">{activeTab === 'questions' ? 'Admin' : 'View'}</span>
                         <ChevronRight className="w-4 h-4 text-gray-300" />
-                        <span className="text-sm font-bold text-gray-800">{currentSchool?.name || 'School'} Application Questions</span>
+                        <span className="text-sm font-bold text-gray-800">
+                            {activeTab === 'questions' 
+                                ? `${currentSchool?.name || 'School'} Application Questions` 
+                                : `Applications of ${currentSchool?.name || 'University of Pennsylvania'}`}
+                        </span>
                     </div>
                 </header>
 
                 <main className="p-8 max-w-5xl mx-auto">
                     {activeTab === 'questions' && <QuestionsTab />}
+                    {activeTab === 'applications' && <ApplicationsTab />}
                 </main>
             </div>
         </div>
